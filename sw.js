@@ -1,6 +1,6 @@
-// Offline helper: always tries the network first so athletes get updates,
-// and falls back to the last saved copy when there is no signal.
-const CACHE = "hyrox-run-v1";
+// Offline helper: always checks GitHub for the latest version first (skipping the
+// browser's 10-minute saved copy), and falls back to the last saved copy with no signal.
+const CACHE = "hyrox-run-v2";
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", e => {
@@ -14,7 +14,7 @@ self.addEventListener("fetch", e => {
   const req = e.request;
   if (req.method !== "GET" || new URL(req.url).origin !== self.location.origin) return;
   e.respondWith(
-    fetch(req)
+    fetch(req, { cache: "no-cache" })
       .then(res => { const copy = res.clone(); caches.open(CACHE).then(c => c.put(req, copy)); return res; })
       .catch(() => caches.match(req).then(hit => hit || caches.match("./")))
   );
