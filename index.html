@@ -261,9 +261,7 @@ function render(){
   const s1 = hasT ? speeds(t) : null;
   const s2 = hasR ? speeds(r) : s1;
 
-  // title + print header
-  $("title").textContent = state.name ? state.name+"’s HYROX Running Program" : "HYROX Running Program";
-  document.title = $("title").textContent;
+  // print header
   $("printhead").textContent = (hasT ? "6-min test: "+t+" m" : "") + (hasR ? "   |   Week 4 retest: "+r+" m" : "");
 
   // lanes
