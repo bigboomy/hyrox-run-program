@@ -93,6 +93,23 @@ button,input{font:inherit;color:inherit}
 .status{font-size:.9rem;margin-left:8px}
 .status.ok{color:var(--done)} .status.bad{color:var(--vo2)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
+.cal{border:1px solid var(--rule);border-radius:10px;padding:14px;margin:22px 0 0}
+.cal h3{margin:0 0 2px;font-size:1.3rem}
+.cal p{margin:0 0 10px;font-size:.85rem;color:var(--muted)}
+.days{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px;border:0;padding:0}
+.days legend{font-size:.85rem;color:var(--muted);margin-bottom:6px;padding:0}
+.day{position:relative}
+.day input{position:absolute;opacity:0;inset:0;cursor:pointer}
+.day span{display:inline-block;min-width:46px;text-align:center;padding:8px 6px;border:2px solid var(--rule);border-radius:8px;font-weight:600;background:var(--soft)}
+.day input:checked+span{border-color:var(--ink);background:var(--ink);color:var(--bg)}
+.day input:disabled+span{opacity:.4}
+.day input:focus-visible+span{outline:3px solid var(--focus);outline-offset:2px}
+.calrow{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end;margin-bottom:12px}
+.calrow label{display:flex;flex-direction:column;font-size:.85rem;color:var(--muted);gap:4px}
+.calrow input[type=date]{background:var(--soft);border:2px solid var(--rule);border-radius:8px;padding:8px 10px;font-size:1rem}
+.calbtns{display:flex;flex-wrap:wrap;gap:8px}
+.warn{font-size:.85rem;color:var(--lt);margin:0 0 10px;min-height:0}
+.calmsg{font-size:.85rem;color:var(--muted);margin-top:8px}
 footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid var(--rule);padding-top:12px}
 .printhead{display:none}
 
@@ -109,7 +126,7 @@ footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid v
   :root{--bg:#fff;--soft:#F4F5F7;--ink:#000;--muted:#555;--rule:#CCC}
   body{font-size:10.5pt}
   .wrap{max-width:none;padding:0}
-  .inputs,.bar,.lede,.noprint,.send{display:none!important}
+  .inputs,.bar,.lede,.noprint,.send,.cal{display:none!important}
   .printhead{display:block;margin:0 0 8px;font-size:10pt;color:#333}
   h1{font-size:26pt}
   .lane{padding:6px 10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -160,6 +177,25 @@ footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid v
     <div class="lanehead"><span>Zone</span><span>Weeks 1–4</span><span>Weeks 5–14</span></div>
     <div class="lanes" id="lanes"></div>
     <p class="hint">Target pace per km, with the fast–slow range (±5% of speed) underneath.</p>
+  </section>
+
+  <section class="cal" aria-label="Add runs to your calendar">
+    <h3>Add runs to your calendar</h3>
+    <p>Pick 3 training days and your start date. Each run becomes an all-day event with its target pace.</p>
+    <fieldset class="days" id="days">
+      <legend>Training days (choose 3): Run 1 goes on the first day, Run 2 on the second, Run 3 on the third.</legend>
+    </fieldset>
+    <p class="warn" id="dayWarn" role="status"></p>
+    <div class="calrow">
+      <label>Week 1 starts
+        <input type="date" id="startDate">
+      </label>
+    </div>
+    <div class="calbtns">
+      <button class="btn" id="cal1" type="button">📅 Add test + Weeks 1–4</button>
+      <button class="btn ghost" id="cal2" type="button">📅 Add Weeks 5–14</button>
+    </div>
+    <p class="calmsg" id="calMsg" role="status"></p>
   </section>
 
   <div class="bar noprint">
@@ -247,7 +283,7 @@ const valid = d => Number.isFinite(d) && d>=600 && d<=2600;
 const KEY="hyroxRunProgram.v1";
 function load(){ try{ return JSON.parse(localStorage.getItem(KEY))||{}; }catch(e){ return {}; } }
 function save(s){ try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} }
-let state = Object.assign({name:"",email:"",test:"",retest:"",ticks:{}}, load());
+let state = Object.assign({name:"",email:"",test:"",retest:"",ticks:{},days:[],start:""}, load());
 
 /* ============================ RENDER ============================ */
 const $ = id => document.getElementById(id);
@@ -312,7 +348,7 @@ function render(){
 /* ============================ EVENTS ============================ */
 ["name","email","test","retest"].forEach(k=>{
   $(k).value = state[k]||"";
-  $(k).addEventListener("input", e=>{ state[k]=e.target.value.trim(); save(state); render(); });
+  $(k).addEventListener("input", e=>{ state[k]=e.target.value.trim(); save(state); render(); if(typeof updateCalHints==="function") updateCalHints(); });
 });
 $("program").addEventListener("change", e=>{
   if(e.target.type!=="checkbox") return;
@@ -350,7 +386,149 @@ $("send").addEventListener("click", async ()=>{
   }catch(e){ st.textContent=""; say("Couldn’t reach the sheet. Check your connection and try again.", false); }
   finally{ $("send").disabled = false; }
 });
+
+/* ============================ CALENDAR (.ics) ============================ */
+const DAY_NAMES = ["Mon","Tue","Wed","Thu","Fri","Sat","Sun"];   // index 0 = Monday
+const APP_URL = "https://bigboomy.github.io/hyrox-run-program/";
+const ZONE_ICON = {aer:"🟦", lt:"🟨", vo2:"🟥"};
+
+function nextMonday(){
+  const d = new Date(); d.setHours(0,0,0,0);
+  const add = (8 - ((d.getDay()+6)%7)) % 7 || 7;  // always the coming Monday
+  d.setDate(d.getDate()+add); return d;
+}
+function toISO(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
+function parseISO(v){ const [y,m,d] = v.split("-").map(Number); return new Date(y, m-1, d); }
+function addDays(d,n){ const x = new Date(d); x.setDate(x.getDate()+n); return x; }
+const mondayIdx = d => (d.getDay()+6)%7;
+
+// The chosen days, in the order they occur in a 7-day window starting on `from`.
+function datesInWindow(from){
+  const out = [];
+  for(let i=0;i<7;i++){ const d = addDays(from,i); if(state.days.includes(mondayIdx(d))) out.push(d); }
+  return out;
+}
+
+function renderDays(){
+  $("days").querySelectorAll(".day").forEach(n=>n.remove());
+  DAY_NAMES.forEach((n,i)=>{
+    const on = state.days.includes(i);
+    const lab = document.createElement("label"); lab.className = "day";
+    lab.innerHTML = `<input type="checkbox" value="${i}" ${on?"checked":""} ${!on && state.days.length>=3?"disabled":""} aria-label="${n}"><span>${n}</span>`;
+    $("days").appendChild(lab);
+  });
+  // warn if Run 1 and Run 2 fall on consecutive days
+  let warn = "";
+  if(state.days.length===3 && state.start){
+    const w = datesInWindow(parseISO(state.start));
+    if(w.length===3 && (w[1]-w[0])/864e5===1) warn = "Heads up: Run 1 (speed) and Run 2 are on back-to-back days. Try to leave a rest day between them if you can.";
+  }
+  $("dayWarn").textContent = warn;
+}
+
+function icsEscape(t){ return String(t).replace(/\\/g,"\\\\").replace(/;/g,"\\;").replace(/,/g,"\\,").replace(/\r?\n/g,"\\n"); }
+// Fold lines at 75 bytes (RFC 5545) without splitting multi-byte characters.
+function fold(line){
+  const enc = new TextEncoder(); let out = "", cur = "", bytes = 0;
+  for(const ch of line){
+    const b = enc.encode(ch).length;
+    if(bytes + b > (out ? 74 : 75)){ out += (out ? "\r\n " : "") + cur; cur = ""; bytes = 0; }
+    cur += ch; bytes += b;
+  }
+  return out + (out ? "\r\n " : "") + cur;
+}
+const ymd = d => toISO(d).replace(/-/g,"");
+
+function buildEvents(fromWeek, toWeek, includeTest){
+  const t = parseFloat(state.test), r = parseFloat(state.retest);
+  const s1 = valid(t) ? speeds(t) : null;
+  const s2 = valid(r) ? speeds(r) : s1;           // no retest: Weeks 5–14 keep first-test paces
+  const start = parseISO(state.start);
+  const events = [];
+  PROGRAM.forEach(s=>{
+    if(s.w===0 && !includeTest) return;
+    if(s.w!==0 && (s.w<fromWeek || s.w>toWeek)) return;
+    const windowStart = addDays(start, (s.w===0 ? -1 : s.w-1)*7);
+    const slots = datesInWindow(windowStart);
+    const runNo = s.w===0 ? 1 : parseInt(s.run.replace(/\D/g,""),10);
+    const date = slots[runNo-1];
+    const sp = s.w<=4 ? s1 : s2;
+    let title, desc = [];
+    if(s.zone){
+      const p = sp ? pace(sp[s.zone]) : null;
+      title = `${ZONE_ICON[s.zone]} ${s.title} – ${s.work}${p?" @ "+p.main+"/km":""}${s.opt?" (optional)":""}`;
+      desc.push(p ? `${ZONES[s.zone].name} pace: ${p.main} /km (range ${p.fast}–${p.slow})` : "Enter your 6-min test in the app to see your pace.");
+    } else {
+      title = `📋 ${s.title} – ${s.work}`;
+    }
+    let note = s.note||"";
+    if(s.strides){ note = `Warm up 5 min + ${s.strides} × 200m strides${sp?" at "+pace(sp.vo2).main+" /km":""}. ` + note; }
+    if(note) desc.push(note);
+    desc.push(`Week ${s.w===0?"0 (before you start)":s.w}${s.w?" – "+PHASES[s.w]:""}`);
+    desc.push("Open your program: " + APP_URL);
+    events.push({uid:`hyrox-w${s.w}-r${runNo}-${ymd(start)}@bigboomy.github.io`, date, title, desc:desc.join("\n")});
+  });
+  return events;
+}
+
+function buildICS(events){
+  const now = new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d{3}/,"");
+  const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//HYROX Running Program//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH","X-WR-CALNAME:HYROX Running Program"];
+  events.forEach(e=>{
+    lines.push("BEGIN:VEVENT","UID:"+e.uid,"DTSTAMP:"+now,
+      "DTSTART;VALUE=DATE:"+ymd(e.date),"DTEND;VALUE=DATE:"+ymd(addDays(e.date,1)),
+      "SUMMARY:"+icsEscape(e.title),"DESCRIPTION:"+icsEscape(e.desc),"URL:"+APP_URL,"TRANSP:TRANSPARENT","END:VEVENT");
+  });
+  lines.push("END:VCALENDAR");
+  return lines.map(fold).join("\r\n") + "\r\n";
+}
+
+function downloadICS(filename, text){
+  const blob = new Blob([text], {type:"text/calendar;charset=utf-8"});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
+}
+
+function calReady(){
+  if(state.days.length!==3){ $("calMsg").textContent = "Choose exactly 3 training days first."; return false; }
+  if(!state.start){ $("calMsg").textContent = "Choose your Week 1 start date first."; return false; }
+  return true;
+}
+function updateCalHints(){
+  const hasT = valid(parseFloat(state.test)), hasR = valid(parseFloat(state.retest));
+  $("cal2").textContent = hasR ? "📅 Add Weeks 5–14 (retest paces)" : "📅 Add Weeks 5–14 (current paces)";
+  $("cal2").title = hasR ? "Uses your Week 4 retest" : "No retest entered, so your first test paces are used";
+  if(!$("calMsg").dataset.sticky) $("calMsg").textContent = !hasT ? "Tip: enter your 6-min test first so paces are included in your calendar." : "";
+}
+
+$("days").addEventListener("change", e=>{
+  if(e.target.type!=="checkbox") return;
+  const i = +e.target.value;
+  state.days = e.target.checked ? [...state.days, i].slice(0,3) : state.days.filter(x=>x!==i);
+  state.days.sort((a,b)=>a-b); save(state); renderDays();
+});
+$("startDate").addEventListener("change", e=>{ state.start = e.target.value; save(state); renderDays(); });
+$("cal1").addEventListener("click", ()=>{
+  if(!calReady()) return;
+  downloadICS("hyrox-test-and-weeks-1-4.ics", buildICS(buildEvents(1,4,true)));
+  $("calMsg").dataset.sticky = "1";
+  $("calMsg").textContent = "Added your test and Weeks 1–4. After your Week 4 retest, enter it above and add Weeks 5–14.";
+});
+$("cal2").addEventListener("click", ()=>{
+  if(!calReady()) return;
+  const hasR = valid(parseFloat(state.retest));
+  downloadICS("hyrox-weeks-5-14.ics", buildICS(buildEvents(5,14,false)));
+  $("calMsg").dataset.sticky = "1";
+  $("calMsg").textContent = hasR ? "Added Weeks 5–14 with your retest paces." : "Added Weeks 5–14 using your first test paces (no retest entered).";
+});
+if(!state.start){ state.start = toISO(nextMonday()); save(state); }
+$("startDate").value = state.start;
+renderDays();
+
 render();
+updateCalHints();
 </script>
 </body>
 </html>
