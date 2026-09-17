@@ -92,7 +92,7 @@ button,input{font:inherit;color:inherit}
 .sess.test{background:var(--soft);border-radius:8px;padding:10px 8px;border-bottom:0;margin:4px 0}
 .sess.done .work,.sess.done .title{text-decoration:line-through;text-decoration-thickness:2px;opacity:.6}
 .empty{padding:14px;border:2px dashed var(--rule);border-radius:10px;color:var(--muted);text-align:center}
-.send{border:1px solid var(--rule);border-radius:10px;padding:14px;margin:0 0 22px;background:var(--soft)}
+.send{display:block;border:1px solid var(--rule);border-radius:10px;padding:14px;margin:0 0 22px;background:var(--soft)}
 .send h3{margin:0 0 2px;font-size:1.3rem}
 .send p{margin:0 0 10px;font-size:.85rem;color:var(--muted)}
 .consent{display:flex;gap:8px;align-items:flex-start;font-size:.85rem;margin:8px 0 10px}
@@ -101,7 +101,7 @@ button,input{font:inherit;color:inherit}
 .status{font-size:.9rem;margin-left:8px}
 .status.ok{color:var(--done)} .status.bad{color:var(--vo2)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
-.cal{border:1px solid var(--rule);border-radius:10px;padding:14px;margin:22px 0 0}
+.cal{display:block;border:1px solid var(--rule);border-radius:10px;padding:14px;margin:22px 0 0}
 .cal h3{margin:0 0 2px;font-size:1.3rem}
 .cal p{margin:0 0 10px;font-size:.85rem;color:var(--muted)}
 .days{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px;border:0;padding:0}
@@ -118,6 +118,19 @@ button,input{font:inherit;color:inherit}
 .calbtns{display:flex;flex-wrap:wrap;gap:8px}
 .warn{font-size:.85rem;color:var(--lt);margin:0 0 10px;min-height:0}
 .calmsg{font-size:.85rem;color:var(--muted);margin-top:8px}
+.fold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.fold>summary::-webkit-details-marker{display:none}
+.fold>summary::after{content:"▾";margin-left:auto;color:var(--muted);transition:transform .15s}
+.fold[open]>summary::after{transform:rotate(180deg)}
+.sum-t{font-family:"Barlow Condensed",Arial,sans-serif;font-weight:700;font-size:1.3rem;line-height:1.1}
+.sum-s{flex-basis:100%;font-size:.85rem;color:var(--muted);order:3}
+.fold[open]>summary{margin-bottom:10px}
+.mafbox{grid-column:1/-1;border:2px solid var(--rule);border-radius:8px;padding:9px 12px;background:var(--soft)}
+.mafbox>summary{font-size:.9rem}
+.mafbox .lab{color:var(--muted)}
+.mafbox .cur{font-weight:600}
+.mafbox .chg{color:var(--hr);font-weight:600;margin-left:auto}
+.mafbox>summary::after{content:none}
 .maf{grid-column:1/-1;border:0;padding:0;margin:0}
 .maf legend{font-size:.85rem;color:var(--muted);margin-bottom:6px;padding:0}
 .maf label{display:flex;flex-direction:row;gap:10px;align-items:flex-start;padding:9px 10px;border:2px solid var(--rule);border-radius:8px;margin-bottom:6px;background:var(--soft);font-size:.9rem;color:var(--ink);cursor:pointer}
@@ -177,6 +190,8 @@ footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid v
       <input id="age" type="number" inputmode="numeric" min="12" max="90" placeholder="e.g. 40">
       <span class="err" id="ageErr"></span>
     </label>
+    <details class="fold mafbox" id="mafBox">
+    <summary><span class="lab">Training history:</span> <span class="cur" id="mafCur"></span><span class="chg">Change ▾</span></summary>
     <fieldset class="maf" id="maf">
       <legend>Which best describes you right now? (sets your Zone 2 heart rate)</legend>
       <label><input type="radio" name="maf" value="-10"><span>Recovering from a major illness (e.g. heart disease, an operation or hospital stay) or on any regular medication</span><b>−10</b></label>
@@ -184,6 +199,7 @@ footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid v
       <label><input type="radio" name="maf" value="0"><span>Training consistently (at least 4× a week) for up to 2 years, with none of the issues above</span><b>0</b></label>
       <label><input type="radio" name="maf" value="5"><span>Training for more than 2 years with none of the issues above, and progressing without injury</span><b>+5</b></label>
     </fieldset>
+    </details>
     <p class="mafnote" id="mafNote" hidden>Age 16 and under: your Zone 2 ceiling is set at 165 bpm.</p>
     <label class="big">6-min test (metres)
       <input id="test" type="number" inputmode="numeric" min="600" max="2600" placeholder="e.g. 1490">
@@ -195,8 +211,8 @@ footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid v
     </label>
   </section>
 
-  <section class="send" aria-label="Send results to your coach">
-    <h3>Send results to your coach</h3>
+  <details class="fold send" id="sendBox">
+    <summary><span class="sum-t">📤 Send results to your coach</span><span class="sum-s" id="sendSum"></span></summary>
     <p>Sends your name, email and test distances. Sending the same result again won’t create a duplicate.</p>
     <div class="inputs" style="margin:0">
       <label class="full">Email
@@ -206,7 +222,7 @@ footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid v
     <label class="trap" aria-hidden="true">Website <input id="website" type="text" tabindex="-1" autocomplete="off"></label>
     <label class="consent"><input id="consent" type="checkbox"> <span>I agree to share my name, email and test results with my coach for this program.</span></label>
     <button class="btn" id="send" type="button">Save my results</button><span class="status" id="sendStatus" role="status"></span>
-  </section>
+  </details>
 
   <section aria-label="Your training zones">
     <div class="lanehead"><span>Zone</span><span>Weeks 1–4</span><span>Weeks 5–14</span></div>
@@ -214,8 +230,8 @@ footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid v
     <p class="hint">Target pace per km, with the fast–slow range (±5% of speed) underneath. Zone 2 runs use heart rate (Maffetone MAF): 180 − age, adjusted for your training history. Stay at or below the top number.</p>
   </section>
 
-  <section class="cal" aria-label="Add runs to your calendar">
-    <h3>Add runs to your calendar</h3>
+  <details class="fold cal" id="calBox">
+    <summary><span class="sum-t">📅 Add runs to your calendar</span><span class="sum-s" id="calSum"></span></summary>
     <p>Pick 3 training days and your start date. Each run becomes an all-day event with its target pace.</p>
     <fieldset class="days" id="days">
       <legend>Training days (choose 3): Run 1 goes on the first day, Run 2 on the second, Run 3 on the third.</legend>
@@ -231,7 +247,7 @@ footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid v
       <button class="btn ghost" id="cal2" type="button">📅 Add Weeks 5–14</button>
     </div>
     <p class="calmsg" id="calMsg" role="status"></p>
-  </section>
+  </details>
 
   <div class="bar noprint">
     <span class="progress" id="progress"></span>
@@ -314,6 +330,7 @@ function fmt(sec){ sec=Math.round(sec); return Math.floor(sec/60)+":"+String(sec
 function pace(v){ return {main:fmt(1000/v), fast:fmt(1000/(v*1.05)), slow:fmt(1000/(v*0.95))}; }
 const valid = d => Number.isFinite(d) && d>=600 && d<=2600;
 const validAge = a => Number.isInteger(a) && a>=12 && a<=90;
+const MAF_SHORT = {"-10":"Recovering or on medication (−10)", "-5":"New, returning, injured or often sick (−5)", "0":"Training consistently, up to 2 yrs (0)", "5":"Training 2+ yrs and progressing (+5)"};
 // Zone 2 heart rate (Maffetone MAF): ceiling = 180 − age + training-history adjustment,
 // zone = ceiling − 10 up to ceiling. Age 16 and under: fixed ceiling of 165.
 // e.g. age 40, no adjustment → 130–140 bpm
@@ -326,7 +343,7 @@ function zone2(age, adj){
 const KEY="hyroxRunProgram.v1";
 function load(){ try{ return JSON.parse(localStorage.getItem(KEY))||{}; }catch(e){ return {}; } }
 function save(s){ try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} }
-let state = Object.assign({name:"",age:"",maf:"0",email:"",test:"",retest:"",ticks:{},days:[],start:""}, load());
+let state = Object.assign({name:"",age:"",maf:"0",sent:"",email:"",test:"",retest:"",ticks:{},days:[],start:""}, load());
 
 /* ============================ RENDER ============================ */
 const $ = id => document.getElementById(id);
@@ -340,7 +357,8 @@ function render(){
   const s1 = hasT ? speeds(t) : null;
   const s2 = hasR ? speeds(r) : s1;
   const a = Number(state.age), hasA = validAge(a), hr = hasA ? zone2(a, state.maf) : null;
-  $("maf").hidden = hasA && a <= 16; $("mafNote").hidden = !(hasA && a <= 16);
+  $("mafBox").hidden = hasA && a <= 16; $("mafNote").hidden = !(hasA && a <= 16);
+  $("mafCur").textContent = MAF_SHORT[String(state.maf)] || MAF_SHORT["0"];
   $("ageErr").textContent = state.age!=="" && !hasA ? "Enter an age between 12 and 90." : "";
 
   // print header
@@ -402,7 +420,7 @@ function render(){
 });
 document.querySelectorAll('input[name="maf"]').forEach(r=>{
   r.checked = r.value === String(state.maf);
-  r.addEventListener("change", ()=>{ state.maf = r.value; save(state); render(); });
+  r.addEventListener("change", ()=>{ state.maf = r.value; save(state); render(); setTimeout(()=>{ $("mafBox").open = false; }, 250); });
 });
 $("program").addEventListener("change", e=>{
   if(e.target.type!=="checkbox") return;
@@ -437,6 +455,7 @@ $("send").addEventListener("click", async ()=>{
     if(results.some(x => x==="error" || x==="invalid")) say("Couldn’t save. Check your details and try again.", false);
     else if(results.every(x => x==="duplicate")) say("Already saved. Nothing new to send.", true);
     else say("Saved. Thanks!", true);
+    if(!results.some(x => x==="error" || x==="invalid")){ state.sent = dists.join(" m, ")+" m"; save(state); updateSummaries(); }
   }catch(e){ st.textContent=""; say("Couldn’t reach the sheet. Check your connection and try again.", false); }
   finally{ $("send").disabled = false; }
 });
@@ -549,6 +568,13 @@ function downloadICS(filename, text){
   setTimeout(()=>URL.revokeObjectURL(url), 4000);
 }
 
+function updateSummaries(){
+  $("sendSum").textContent = state.sent ? `✓ Sent: ${state.sent}` : "Not sent yet";
+  const d = state.days.length===3 ? state.days.map(i=>DAY_NAMES[i]).join(" · ") : "Choose 3 days";
+  const st = state.start ? parseISO(state.start).toLocaleDateString(undefined,{day:"numeric",month:"short"}) : "";
+  $("calSum").textContent = state.days.length===3 && st ? `${d}, starts ${st}` : "Choose 3 training days and a start date";
+}
+
 function calReady(){
   if(state.days.length!==3){ $("calMsg").textContent = "Choose exactly 3 training days first."; return false; }
   if(!state.start){ $("calMsg").textContent = "Choose your Week 1 start date first."; return false; }
@@ -565,9 +591,9 @@ $("days").addEventListener("change", e=>{
   if(e.target.type!=="checkbox") return;
   const i = +e.target.value;
   state.days = e.target.checked ? [...state.days, i].slice(0,3) : state.days.filter(x=>x!==i);
-  state.days.sort((a,b)=>a-b); save(state); renderDays();
+  state.days.sort((a,b)=>a-b); save(state); renderDays(); updateSummaries();
 });
-$("startDate").addEventListener("change", e=>{ state.start = e.target.value; save(state); renderDays(); });
+$("startDate").addEventListener("change", e=>{ state.start = e.target.value; save(state); renderDays(); updateSummaries(); });
 $("cal1").addEventListener("click", ()=>{
   if(!calReady()) return;
   downloadICS("hyrox-test-and-weeks-1-4.ics", buildICS(buildEvents(1,4,true)));
@@ -587,6 +613,7 @@ renderDays();
 
 render();
 updateCalHints();
+updateSummaries();
 
 /* ============================ ADD TO HOME SCREEN ============================ */
 (function(){ try {
