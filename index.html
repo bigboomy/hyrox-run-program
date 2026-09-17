@@ -118,6 +118,13 @@ button,input{font:inherit;color:inherit}
 .calbtns{display:flex;flex-wrap:wrap;gap:8px}
 .warn{font-size:.85rem;color:var(--lt);margin:0 0 10px;min-height:0}
 .calmsg{font-size:.85rem;color:var(--muted);margin-top:8px}
+.maf{grid-column:1/-1;border:0;padding:0;margin:0}
+.maf legend{font-size:.85rem;color:var(--muted);margin-bottom:6px;padding:0}
+.maf label{display:flex;flex-direction:row;gap:10px;align-items:flex-start;padding:9px 10px;border:2px solid var(--rule);border-radius:8px;margin-bottom:6px;background:var(--soft);font-size:.9rem;color:var(--ink);cursor:pointer}
+.maf input{width:18px;height:18px;margin:2px 0 0;padding:0;flex:none;accent-color:var(--hr)}
+.maf label:has(input:checked){border-color:var(--hr)}
+.maf b{font-weight:600;color:var(--hr);margin-left:auto;padding-left:8px;white-space:nowrap}
+.mafnote{grid-column:1/-1;font-size:.85rem;color:var(--muted);margin:0}
 .install{margin:-8px 0 20px}
 .ihelp{margin-top:10px;border:1px solid var(--rule);background:var(--soft);border-radius:10px;padding:12px 14px;font-size:.9rem}
 .ihelp ol{margin:6px 0 6px 18px;padding:0}
@@ -170,6 +177,14 @@ footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid v
       <input id="age" type="number" inputmode="numeric" min="12" max="90" placeholder="e.g. 40">
       <span class="err" id="ageErr"></span>
     </label>
+    <fieldset class="maf" id="maf">
+      <legend>Which best describes you right now? (sets your Zone 2 heart rate)</legend>
+      <label><input type="radio" name="maf" value="-10"><span>Recovering from a major illness (e.g. heart disease, an operation or hospital stay) or on any regular medication</span><b>−10</b></label>
+      <label><input type="radio" name="maf" value="-5"><span>New or returning to training, injured, often sick (more than 2× per year)</span><b>−5</b></label>
+      <label><input type="radio" name="maf" value="0"><span>Training consistently (at least 4× a week) for up to 2 years, with none of the issues above</span><b>0</b></label>
+      <label><input type="radio" name="maf" value="5"><span>Training for more than 2 years with none of the issues above, and progressing without injury</span><b>+5</b></label>
+    </fieldset>
+    <p class="mafnote" id="mafNote" hidden>Age 16 and under: your Zone 2 ceiling is set at 165 bpm.</p>
     <label class="big">6-min test (metres)
       <input id="test" type="number" inputmode="numeric" min="600" max="2600" placeholder="e.g. 1490">
       <span class="err" id="testErr"></span>
@@ -196,7 +211,7 @@ footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid v
   <section aria-label="Your training zones">
     <div class="lanehead"><span>Zone</span><span>Weeks 1–4</span><span>Weeks 5–14</span></div>
     <div class="lanes" id="lanes"></div>
-    <p class="hint">Target pace per km, with the fast–slow range (±5% of speed) underneath. Zone 2 runs use heart rate: 180 minus your age, ±5 bpm.</p>
+    <p class="hint">Target pace per km, with the fast–slow range (±5% of speed) underneath. Zone 2 runs use heart rate (Maffetone MAF): 180 − age, adjusted for your training history. Stay at or below the top number.</p>
   </section>
 
   <section class="cal" aria-label="Add runs to your calendar">
@@ -299,14 +314,19 @@ function fmt(sec){ sec=Math.round(sec); return Math.floor(sec/60)+":"+String(sec
 function pace(v){ return {main:fmt(1000/v), fast:fmt(1000/(v*1.05)), slow:fmt(1000/(v*0.95))}; }
 const valid = d => Number.isFinite(d) && d>=600 && d<=2600;
 const validAge = a => Number.isInteger(a) && a>=12 && a<=90;
-// Zone 2 heart rate: 180 − age, ±5 bpm (e.g. age 40 → 135–145 bpm)
-function zone2(age){ const c = 180 - age; return {low:c-5, high:c+5, text:`${c-5}–${c+5} bpm`}; }
+// Zone 2 heart rate (Maffetone MAF): ceiling = 180 − age + training-history adjustment,
+// zone = ceiling − 10 up to ceiling. Age 16 and under: fixed ceiling of 165.
+// e.g. age 40, no adjustment → 130–140 bpm
+function zone2(age, adj){
+  const c = age <= 16 ? 165 : 180 - age + (Number(adj) || 0);
+  return {low:c-10, high:c, text:`${c-10}–${c} bpm`};
+}
 
 /* ============================ STORAGE ============================ */
 const KEY="hyroxRunProgram.v1";
 function load(){ try{ return JSON.parse(localStorage.getItem(KEY))||{}; }catch(e){ return {}; } }
 function save(s){ try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} }
-let state = Object.assign({name:"",age:"",email:"",test:"",retest:"",ticks:{},days:[],start:""}, load());
+let state = Object.assign({name:"",age:"",maf:"0",email:"",test:"",retest:"",ticks:{},days:[],start:""}, load());
 
 /* ============================ RENDER ============================ */
 const $ = id => document.getElementById(id);
@@ -319,7 +339,8 @@ function render(){
   $("retestErr").textContent = state.retest!=="" && !hasR ? "Enter a distance between 600 and 2600 m." : "";
   const s1 = hasT ? speeds(t) : null;
   const s2 = hasR ? speeds(r) : s1;
-  const a = Number(state.age), hasA = validAge(a), hr = hasA ? zone2(a) : null;
+  const a = Number(state.age), hasA = validAge(a), hr = hasA ? zone2(a, state.maf) : null;
+  $("maf").hidden = hasA && a <= 16; $("mafNote").hidden = !(hasA && a <= 16);
   $("ageErr").textContent = state.age!=="" && !hasA ? "Enter an age between 12 and 90." : "";
 
   // print header
@@ -327,7 +348,7 @@ function render(){
 
   // lanes
   $("lanes").innerHTML = `<div class="lane hr"><div class="z">${ZONES.hr.name}<small>${ZONES.hr.desc}</small></div>
-      ${hr ? `<div class="p span">${hr.text}<span>All weeks · 180 − age, ±5 bpm</span></div>` : `<div class="p na span">Enter your age</div>`}</div>` +
+      ${hr ? `<div class="p span">${hr.text}<span>All weeks · stay at or below ${hr.high}</span></div>` : `<div class="p na span">Enter your age</div>`}</div>` +
     ["aer","lt","vo2"].map(z=>{
     const cell = (s, pending) => {
       if(!s) return `<div class="p na">${pending}</div>`;
@@ -378,6 +399,10 @@ function render(){
 ["name","age","email","test","retest"].forEach(k=>{
   $(k).value = state[k]||"";
   $(k).addEventListener("input", e=>{ state[k]=e.target.value.trim(); save(state); render(); if(typeof updateCalHints==="function") updateCalHints(); });
+});
+document.querySelectorAll('input[name="maf"]').forEach(r=>{
+  r.checked = r.value === String(state.maf);
+  r.addEventListener("change", ()=>{ state.maf = r.value; save(state); render(); });
 });
 $("program").addEventListener("change", e=>{
   if(e.target.type!=="checkbox") return;
@@ -483,10 +508,10 @@ function buildEvents(fromWeek, toWeek, includeTest){
     const date = slots[runNo-1];
     const sp = s.w<=4 ? s1 : s2;
     let title, desc = [];
-    const age = Number(state.age), hr = validAge(age) ? zone2(age) : null;
+    const age = Number(state.age), hr = validAge(age) ? zone2(age, state.maf) : null;
     if(s.zone==="hr"){
       title = `${ZONE_ICON.hr} ${s.title} – ${s.work}${hr?" @ "+hr.text:""}`;
-      desc.push(hr ? `Zone 2 heart rate: ${hr.text} (180 − age, ±5 bpm)` : "Enter your age in the app to see your Zone 2 heart rate.");
+      desc.push(hr ? `Zone 2 heart rate: ${hr.text}. Stay at or below ${hr.high} bpm (Maffetone MAF).` : "Enter your age in the app to see your Zone 2 heart rate.");
     } else if(s.zone){
       const p = sp ? pace(sp[s.zone]) : null;
       title = `${ZONE_ICON[s.zone]} ${s.title} – ${s.work}${p?" @ "+p.main+"/km":""}${s.opt?" (optional)":""}`;
