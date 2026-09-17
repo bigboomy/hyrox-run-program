@@ -1,0 +1,358 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HYROX Running Program</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#FFFFFF; --soft:#F1F3F6; --ink:#1B2230; --muted:#5E6878; --rule:#D5DAE1;
+  --aer:#1F8A8A; --lt:#C98A0B; --vo2:#D9412B; --done:#2E7D4F; --focus:#2F6FEB;
+  --aer-bg:#E3F2F2; --lt-bg:#FBF0D6; --vo2-bg:#FBE4E0;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#141922; --soft:#1D2430; --ink:#E8ECF2; --muted:#9AA4B3; --rule:#2E3747;
+    --aer:#4CC0C0; --lt:#F0B63C; --vo2:#FF6B55; --done:#5BC08A; --focus:#7AA7FF;
+    --aer-bg:#16302F; --lt-bg:#33290F; --vo2-bg:#3A1F1B;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#141922; --soft:#1D2430; --ink:#E8ECF2; --muted:#9AA4B3; --rule:#2E3747;
+  --aer:#4CC0C0; --lt:#F0B63C; --vo2:#FF6B55; --done:#5BC08A; --focus:#7AA7FF;
+  --aer-bg:#16302F; --lt-bg:#33290F; --vo2-bg:#3A1F1B;
+}
+*{box-sizing:border-box}
+html{-webkit-text-size-adjust:100%}
+body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 "Barlow",system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
+.wrap{max-width:760px;margin:0 auto;padding:28px 18px 64px}
+h1,h2,h3,.cond{font-family:"Barlow Condensed","Arial Narrow",Arial,sans-serif;letter-spacing:.01em}
+h1{font-size:clamp(2.2rem,8vw,3.4rem);line-height:.95;margin:0 0 6px;font-weight:800}
+.lede{color:var(--muted);margin:0 0 24px;max-width:60ch}
+button,input{font:inherit;color:inherit}
+:focus-visible{outline:3px solid var(--focus);outline-offset:2px}
+
+/* inputs */
+.inputs{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:22px}
+.inputs label{display:flex;flex-direction:column;font-size:.85rem;color:var(--muted);gap:4px}
+.inputs label.full{grid-column:1/-1}
+.inputs input{background:var(--soft);border:2px solid var(--rule);border-radius:8px;padding:10px 12px;font-size:1.05rem;width:100%}
+.inputs input:focus{border-color:var(--focus);outline:none}
+.inputs .big input{font-family:"Barlow Condensed",Arial,sans-serif;font-size:2rem;font-weight:700;padding:6px 12px}
+.hint{font-size:.8rem;color:var(--muted)}
+.err{color:var(--vo2);font-size:.8rem;min-height:1em}
+
+/* lanes = the memorable element */
+.lanes{border-radius:10px;overflow:hidden;border:1px solid var(--rule);margin-bottom:10px}
+.lane{display:grid;grid-template-columns:120px 1fr 1fr;align-items:center;padding:12px 14px;background:var(--soft);position:relative}
+.lane+.lane{border-top:2px dashed var(--rule)}
+.lane::before{content:"";position:absolute;left:0;top:0;bottom:0;width:6px;background:var(--c)}
+.lane .z{font-family:"Barlow Condensed",Arial,sans-serif;font-weight:700;font-size:1.3rem;color:var(--c);padding-left:6px;line-height:1.1}
+.lane .z small{display:block;font-family:"Barlow",Arial,sans-serif;font-weight:500;font-size:.72rem;color:var(--muted)}
+.lane .p{font-family:"Barlow Condensed",Arial,sans-serif;font-size:1.9rem;font-weight:700;line-height:1}
+.lane .p span{display:block;font-family:"Barlow",Arial,sans-serif;font-size:.78rem;font-weight:500;color:var(--muted);margin-top:2px}
+.lane .p.na{font-size:1rem;color:var(--muted);font-weight:600}
+.lanehead{display:grid;grid-template-columns:120px 1fr 1fr;padding:0 14px 4px;font-size:.78rem;color:var(--muted)}
+.aer{--c:var(--aer);--cb:var(--aer-bg)} .lt{--c:var(--lt);--cb:var(--lt-bg)} .vo2{--c:var(--vo2);--cb:var(--vo2-bg)}
+
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:22px 0 8px}
+.progress{font-size:.9rem;color:var(--muted)}
+.btn{background:var(--ink);color:var(--bg);border:0;border-radius:8px;padding:10px 16px;font-weight:600;cursor:pointer}
+.btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--rule)}
+
+/* program */
+.week{margin-top:26px;break-inside:avoid-page}
+.week h2{display:flex;align-items:baseline;gap:10px;margin:0 0 6px;font-size:1.7rem;font-weight:800;border-bottom:3px solid var(--ink);padding-bottom:2px}
+.week h2 .phase{font-size:1rem;font-weight:600;color:var(--muted)}
+.week h2 .src{margin-left:auto;font-family:"Barlow",Arial,sans-serif;font-size:.75rem;font-weight:500;color:var(--muted)}
+.sess{display:grid;grid-template-columns:34px 1fr auto;gap:4px 10px;padding:10px 0;border-bottom:1px solid var(--rule);align-items:start}
+.sess input[type=checkbox]{width:22px;height:22px;margin:3px 0 0;accent-color:var(--done);cursor:pointer}
+.sess .what{min-width:0}
+.sess .run{font-size:.8rem;color:var(--muted)}
+.sess .title{font-weight:600}
+.sess .work{font-family:"Barlow Condensed",Arial,sans-serif;font-size:1.25rem;font-weight:700;line-height:1.15}
+.sess .note{font-size:.85rem;color:var(--muted)}
+.sess .pace{text-align:right;white-space:nowrap}
+.pill{display:inline-block;background:var(--cb);color:var(--c);font-weight:700;font-size:.75rem;border-radius:4px;padding:1px 7px;margin-bottom:2px}
+.sess .pace b{display:block;font-family:"Barlow Condensed",Arial,sans-serif;font-size:1.35rem;line-height:1}
+.sess .pace span{font-size:.78rem;color:var(--muted)}
+.sess.opt .work,.sess.opt .title{color:var(--muted)}
+.sess.opt .title::after{content:" (optional)";font-weight:400}
+.sess.test{background:var(--soft);border-radius:8px;padding:10px 8px;border-bottom:0;margin:4px 0}
+.sess.done .work,.sess.done .title{text-decoration:line-through;text-decoration-thickness:2px;opacity:.6}
+.empty{padding:14px;border:2px dashed var(--rule);border-radius:10px;color:var(--muted);text-align:center}
+.send{border:1px solid var(--rule);border-radius:10px;padding:14px;margin:0 0 22px;background:var(--soft)}
+.send h3{margin:0 0 2px;font-size:1.3rem}
+.send p{margin:0 0 10px;font-size:.85rem;color:var(--muted)}
+.consent{display:flex;gap:8px;align-items:flex-start;font-size:.85rem;margin:8px 0 10px}
+.consent input{width:18px;height:18px;margin-top:2px;accent-color:var(--done)}
+.trap{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+.status{font-size:.9rem;margin-left:8px}
+.status.ok{color:var(--done)} .status.bad{color:var(--vo2)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid var(--rule);padding-top:12px}
+.printhead{display:none}
+
+@media (max-width:520px){
+  .inputs{grid-template-columns:1fr}
+  .lane,.lanehead{grid-template-columns:92px 1fr 1fr}
+  .lane .p{font-size:1.5rem}
+  .week h2 .src{display:none}
+}
+@media (prefers-reduced-motion:no-preference){ .sess input{transition:transform .1s} .sess input:active{transform:scale(.9)} }
+
+@media print{
+  @page{size:A4 portrait;margin:12mm}
+  :root{--bg:#fff;--soft:#F4F5F7;--ink:#000;--muted:#555;--rule:#CCC}
+  body{font-size:10.5pt}
+  .wrap{max-width:none;padding:0}
+  .inputs,.bar,.lede,.noprint,.send{display:none!important}
+  .printhead{display:block;margin:0 0 8px;font-size:10pt;color:#333}
+  h1{font-size:26pt}
+  .lane{padding:6px 10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
+  .lane .p{font-size:16pt}
+  .week{margin-top:12px}
+  .week h2{font-size:15pt}
+  .sess{padding:5px 0;break-inside:avoid}
+  .sess .work{font-size:12pt}
+  .sess .pace b{font-size:12pt}
+  .pill,.lane::before{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <h1 id="title">HYROX Running Program</h1>
+  <p class="lede">Enter your 6-minute test distance and the 14-week program sets your paces. Your entries and ticks stay saved on this device.</p>
+  <p class="printhead" id="printhead"></p>
+
+  <section class="inputs" aria-label="Your test results">
+    <label class="full">Athlete name
+      <input id="name" type="text" autocomplete="name" placeholder="Your name">
+    </label>
+    <label class="big">6-min test (metres)
+      <input id="test" type="number" inputmode="numeric" min="600" max="2600" placeholder="e.g. 1490">
+      <span class="err" id="testErr"></span>
+    </label>
+    <label class="big">Week 4 retest (metres)
+      <input id="retest" type="number" inputmode="numeric" min="600" max="2600" placeholder="After Week 4">
+      <span class="err" id="retestErr"></span>
+    </label>
+  </section>
+
+  <section class="send" aria-label="Send results to your coach">
+    <h3>Send results to your coach</h3>
+    <p>Sends your name, email and test distances. Sending the same result again won’t create a duplicate.</p>
+    <div class="inputs" style="margin:0">
+      <label class="full">Email
+        <input id="email" type="email" autocomplete="email" placeholder="you@example.com">
+      </label>
+    </div>
+    <label class="trap" aria-hidden="true">Website <input id="website" type="text" tabindex="-1" autocomplete="off"></label>
+    <label class="consent"><input id="consent" type="checkbox"> <span>I agree to share my name, email and test results with my coach for this program.</span></label>
+    <button class="btn" id="send" type="button">Save my results</button><span class="status" id="sendStatus" role="status"></span>
+  </section>
+
+  <section aria-label="Your training zones">
+    <div class="lanehead"><span>Zone</span><span>Weeks 1–4</span><span>Weeks 5–14</span></div>
+    <div class="lanes" id="lanes"></div>
+    <p class="hint">Target pace per km, with the fast–slow range (±5% of speed) underneath.</p>
+  </section>
+
+  <div class="bar noprint">
+    <span class="progress" id="progress"></span>
+    <span>
+      <button class="btn ghost" id="reset" type="button">Clear ticks</button>
+      <button class="btn" id="print" type="button">🖨 Print program</button>
+    </span>
+  </div>
+
+  <div id="program"></div>
+
+  <footer>Pace calculations use the Running Fatigue Factor method by aerobiccapacity.com. Program for HYROX preparation.</footer>
+</main>
+
+<script>
+/* Paste your Google Apps Script web app URL here (ends in /exec). */
+const SHEET_URL = "";
+
+/* ============================================================
+   PROGRAM CONTENT — edit sessions here. Calculation code below.
+   zone: "aer" | "lt" | "vo2" | null (tests)
+   strides: number of 200m warm-up strides at VO2max pace
+   ============================================================ */
+const PHASES = {0:"Pre-program",1:"Base",2:"Base",3:"Base",4:"Base",5:"Base",6:"Deload",7:"Build",8:"Build",9:"Build",10:"Build",11:"Build",12:"Race specific",13:"Race specific",14:"Race week"};
+const PROGRAM = [
+ {w:0, run:"Test", title:"6-min test", zone:null, work:"6-minute max distance test", note:"Run as far as you can in 6 minutes, then enter the distance above.", test:true},
+ {w:1, run:"Run 1", title:"Speed", zone:"vo2", work:"8 × 400m", note:"Warm up 5 min. 90 sec rest between reps."},
+ {w:1, run:"Run 2", title:"Zone 2", zone:"aer", work:"30 min continuous"},
+ {w:1, run:"Run 3", title:"Distance", zone:"aer", work:"4km steady", opt:true},
+ {w:2, run:"Run 1", title:"Speed", zone:"vo2", work:"10 × 400m", note:"Warm up 5 min. 60–90 sec rest between reps."},
+ {w:2, run:"Run 2", title:"Zone 2", zone:"aer", work:"30–40 min continuous"},
+ {w:2, run:"Run 3", title:"Distance", zone:"aer", work:"4km steady", opt:true},
+ {w:3, run:"Run 1", title:"Speed", zone:"vo2", work:"800, 600, 400, 200 ×2 rounds", note:"Warm up 5 min. 1 min between reps, 3 min between rounds."},
+ {w:3, run:"Run 2", title:"Zone 2", zone:"aer", work:"30–35 min continuous"},
+ {w:3, run:"Run 3", title:"Split distance", zone:"aer", work:"3 × 2km", note:"1 min walk between.", opt:true},
+ {w:4, run:"Run 1", title:"Speed", zone:"vo2", work:"2×800, 2×600, 2×400", note:"Warm up 5 min. 1 min rest between reps."},
+ {w:4, run:"Run 2", title:"Zone 2", zone:"aer", work:"35–45 min continuous"},
+ {w:4, run:"Run 3", title:"Retest", zone:null, work:"6-minute max distance retest", note:"Enter the distance above. It updates your paces for Weeks 5–14.", test:true},
+ {w:5, run:"Run 1", title:"Speed", zone:"vo2", work:"1000, 800, 600, 400 ×2 rounds", note:"Warm up 5 min. 1 min between reps, 3 min between rounds."},
+ {w:5, run:"Run 2", title:"Zone 2", zone:"aer", work:"40–50 min continuous"},
+ {w:5, run:"Run 3", title:"Distance", zone:"aer", work:"6km steady", opt:true},
+ {w:6, run:"Run 1", title:"Intervals", zone:"vo2", work:"8 × 400m", note:"1 min rest between reps."},
+ {w:6, run:"Run 2", title:"Zone 2", zone:"aer", work:"30 min continuous"},
+ {w:6, run:"Run 3", title:"Distance", zone:"aer", work:"4 × 1km", note:"90 sec walk between."},
+ {w:7, run:"Run 1", title:"Speed", zone:"vo2", work:"2×1000, 2×800, 2×600, 2×400", strides:3, note:"1 min rest between reps."},
+ {w:7, run:"Run 2", title:"Threshold", zone:"lt", work:"30–40 min continuous"},
+ {w:8, run:"Run 1", title:"Speed", zone:"vo2", work:"1200, 800, 400 ×2 rounds", strides:3, note:"90 sec between reps, 3 min between rounds."},
+ {w:8, run:"Run 2", title:"Threshold", zone:"lt", work:"35–40 min continuous"},
+ {w:8, run:"Run 3", title:"Distance", zone:"aer", work:"8km steady", opt:true},
+ {w:9, run:"Run 1", title:"Speed", zone:"vo2", work:"2×1200, 2×1000, 2×800", strides:3, note:"1 min rest between reps."},
+ {w:9, run:"Run 2", title:"Threshold", zone:"lt", work:"40–45 min continuous"},
+ {w:9, run:"Run 3", title:"Distance", zone:"aer", work:"10km steady", opt:true},
+ {w:10, run:"Run 1", title:"Speed", zone:"vo2", work:"1500, 1000, 800, 400 ×2 rounds", strides:2, note:"1 min between reps, 3 min between rounds."},
+ {w:10, run:"Run 2", title:"Threshold", zone:"lt", work:"45–50 min continuous", note:"From here: 2 runs a week. Add compromised running and erg work, and prioritise leg recovery."},
+ {w:11, run:"Run 1", title:"Speed", zone:"vo2", work:"2×1500, 2×1000, 2×800, 2×400", strides:3, note:"1 min rest between reps."},
+ {w:11, run:"Run 2", title:"Threshold", zone:"lt", work:"50–60 min continuous"},
+ {w:12, run:"Run 1", title:"Race pace", zone:"lt", work:"8 × 1km", strides:2, note:"1 min rest. Feel the pace and check your watch as little as possible."},
+ {w:12, run:"Run 2", title:"Threshold", zone:"lt", work:"60 min continuous"},
+ {w:13, run:"Run 1", title:"Race pace", zone:"lt", work:"8 × 1200m", strides:2, note:"1 min rest. Feel the pace and check your watch as little as possible."},
+ {w:13, run:"Run 2", title:"Threshold", zone:"lt", work:"60 min continuous"},
+ {w:14, run:"Run 1", title:"Steady intervals", zone:"aer", work:"8 × 400m", strides:2, note:"90 sec rest between reps."},
+ {w:14, run:"Run 2", title:"Recovery", zone:"aer", work:"20–30 min continuous"}
+];
+const ZONES = {aer:{name:"Aerobic",desc:"Easy, Zone 2, steady"}, lt:{name:"Threshold",desc:"LT, race pace"}, vo2:{name:"VO2max",desc:"Speed reps"}};
+
+/* ============================ CALCULATIONS ============================
+   Running Fatigue Factor (aerobiccapacity.com), 6-min test only. Speeds in m/s.
+*/
+function speeds(d){
+  const v6 = d/6;                                   // m/min
+  const pct = 0.8 + 0.1894393*Math.exp(-0.012778*6) + 0.2989558*Math.exp(-0.1932605*6);
+  const vdot = (-4.6 + 0.182258*v6 + 0.000104*v6*v6)/pct;
+  const aer = d*Math.pow(10, Math.log10(60)/1.105)/21600;           // Riegel 6-hr projection
+  const v88 = 0.88*vdot;
+  const lt = (29.54 + 5.000663*v88 - 0.007546*v88*v88)/60;          // 88% VDOT
+  const vo2 = 2.8859 + 0.0686*(vdot - 29);
+  return {aer, lt, vo2};
+}
+function fmt(sec){ sec=Math.round(sec); return Math.floor(sec/60)+":"+String(sec%60).padStart(2,"0"); }
+function pace(v){ return {main:fmt(1000/v), fast:fmt(1000/(v*1.05)), slow:fmt(1000/(v*0.95))}; }
+const valid = d => Number.isFinite(d) && d>=600 && d<=2600;
+
+/* ============================ STORAGE ============================ */
+const KEY="hyroxRunProgram.v1";
+function load(){ try{ return JSON.parse(localStorage.getItem(KEY))||{}; }catch(e){ return {}; } }
+function save(s){ try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} }
+let state = Object.assign({name:"",email:"",test:"",retest:"",ticks:{}}, load());
+
+/* ============================ RENDER ============================ */
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+
+function render(){
+  const t = parseFloat(state.test), r = parseFloat(state.retest);
+  const hasT = valid(t), hasR = valid(r);
+  $("testErr").textContent = state.test!=="" && !hasT ? "Enter a distance between 600 and 2600 m." : "";
+  $("retestErr").textContent = state.retest!=="" && !hasR ? "Enter a distance between 600 and 2600 m." : "";
+  const s1 = hasT ? speeds(t) : null;
+  const s2 = hasR ? speeds(r) : s1;
+
+  // title + print header
+  $("title").textContent = state.name ? state.name+"’s HYROX Running Program" : "HYROX Running Program";
+  document.title = $("title").textContent;
+  $("printhead").textContent = (hasT ? "6-min test: "+t+" m" : "") + (hasR ? "   |   Week 4 retest: "+r+" m" : "");
+
+  // lanes
+  $("lanes").innerHTML = ["aer","lt","vo2"].map(z=>{
+    const cell = (s, pending) => {
+      if(!s) return `<div class="p na">${pending}</div>`;
+      const p = pace(s[z]); return `<div class="p">${p.main}<span>${p.fast}–${p.slow} /km</span></div>`;
+    };
+    return `<div class="lane ${z}"><div class="z">${ZONES[z].name}<small>${ZONES[z].desc}</small></div>
+      ${cell(s1,"Enter test")}${cell(hasR?s2:null, hasT?"After retest":"Enter test")}</div>`;
+  }).join("");
+
+  // program
+  let html = "", cur = -1, total = 0, done = 0;
+  PROGRAM.forEach((s,i)=>{
+    if(s.w!==cur){
+      if(cur!==-1) html += "</section>";
+      cur = s.w;
+      const src = s.w===0 ? "" : s.w<=4 ? "Paces from your test" : (hasR ? "Paces from your retest" : "Using first test until retest is entered");
+      html += `<section class="week"><h2>${s.w===0?"Before you start":"Week "+s.w}<span class="phase">${s.w===0?"":PHASES[s.w]}</span><span class="src">${src}</span></h2>`;
+    }
+    const id = "s"+i, checked = !!state.ticks[id];
+    total++; if(checked) done++;
+    const sp = s.w<=4 ? s1 : s2;
+    let paceHtml = "";
+    if(s.zone){
+      paceHtml = `<span class="pill ${s.zone}">${ZONES[s.zone].name}</span>`;
+      if(sp){ const p = pace(sp[s.zone]); paceHtml += `<b>${p.main} /km</b><span>${p.fast}–${p.slow}</span>`; }
+      else paceHtml += `<span>Enter test</span>`;
+    }
+    let note = s.note||"";
+    if(s.strides){
+      const sv = sp ? " at "+pace(sp.vo2).main+" /km" : "";
+      note = `Warm up 5 min + ${s.strides} × 200m strides${sv}. ` + note;
+    }
+    html += `<div class="sess${s.opt?" opt":""}${s.test?" test":""}${checked?" done":""}">
+      <input type="checkbox" id="${id}" ${checked?"checked":""} aria-label="Mark ${esc(s.run)} week ${s.w} done">
+      <label class="what" for="${id}"><div class="run">${esc(s.run)}</div><div class="title">${esc(s.title)}</div>
+        <div class="work">${esc(s.work)}</div>${note?`<div class="note">${esc(note)}</div>`:""}</label>
+      <div class="pace">${paceHtml}</div></div>`;
+  });
+  html += "</section>";
+  if(!hasT) html = `<div class="empty">Enter your 6-minute test distance above to see your paces.</div>` + html;
+  $("program").innerHTML = html;
+  $("progress").textContent = `${done} of ${total} sessions done`;
+}
+
+/* ============================ EVENTS ============================ */
+["name","email","test","retest"].forEach(k=>{
+  $(k).value = state[k]||"";
+  $(k).addEventListener("input", e=>{ state[k]=e.target.value.trim(); save(state); render(); });
+});
+$("program").addEventListener("change", e=>{
+  if(e.target.type!=="checkbox") return;
+  state.ticks[e.target.id] = e.target.checked; save(state);
+  e.target.closest(".sess").classList.toggle("done", e.target.checked);
+  const d = Object.values(state.ticks).filter(Boolean).length;
+  $("progress").textContent = `${d} of ${PROGRAM.length} sessions done`;
+});
+$("reset").addEventListener("click", ()=>{ if(confirm("Clear all ticked sessions?")){ state.ticks={}; save(state); render(); } });
+$("print").addEventListener("click", ()=>window.print());
+
+async function sendRow(distance){
+  const res = await fetch(SHEET_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
+    body: JSON.stringify({name:state.name, email:state.email, distance, website:$("website").value})});
+  return (await res.json()).status;
+}
+$("send").addEventListener("click", async ()=>{
+  const st = $("sendStatus"); st.className = "status";
+  const t = parseFloat(state.test), r = parseFloat(state.retest);
+  const say = (msg, ok) => { st.textContent = msg; st.classList.add(ok ? "ok" : "bad"); };
+  if(!SHEET_URL) return say("Saving isn’t switched on yet. Your coach will share the live link.", false);
+  if(!state.name) return say("Add your name first.", false);
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(state.email)) return say("Enter a valid email.", false);
+  if(!valid(t)) return say("Enter your 6-min test distance first.", false);
+  if(!$("consent").checked) return say("Tick the box to agree to sharing.", false);
+  const dists = [t]; if(valid(r) && r!==t) dists.push(r);
+  $("send").disabled = true; st.textContent = "Saving…";
+  try{
+    const results = [];
+    for(const d of dists) results.push(await sendRow(d));
+    st.textContent = "";
+    if(results.some(x => x==="error" || x==="invalid")) say("Couldn’t save. Check your details and try again.", false);
+    else if(results.every(x => x==="duplicate")) say("Already saved. Nothing new to send.", true);
+    else say("Saved. Thanks!", true);
+  }catch(e){ st.textContent=""; say("Couldn’t reach the sheet. Check your connection and try again.", false); }
+  finally{ $("send").disabled = false; }
+});
+render();
+</script>
+</body>
+</html>
