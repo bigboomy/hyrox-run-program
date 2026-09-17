@@ -9,6 +9,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="HYROX Run">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
@@ -253,8 +254,9 @@ footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid v
     <span class="progress" id="progress"></span>
     <span>
       <button class="btn ghost" id="reset" type="button">Clear ticks</button>
-      <button class="btn" id="print" type="button">🖨 Print program</button>
+      <button class="btn" id="pdf" type="button">📄 Save program as PDF</button>
     </span>
+    <span class="calmsg" id="pdfMsg" role="status" style="flex-basis:100%;margin:0"></span>
   </div>
 
   <div id="program"></div>
@@ -430,7 +432,129 @@ $("program").addEventListener("change", e=>{
   $("progress").textContent = `${d} of ${PROGRAM.length} sessions done`;
 });
 $("reset").addEventListener("click", ()=>{ if(confirm("Clear all ticked sessions?")){ state.ticks={}; save(state); render(); } });
-$("print").addEventListener("click", ()=>window.print());
+/* ============================ SAVE AS PDF ============================ */
+// PDF core fonts only cover basic characters, so swap symbols for plain equivalents.
+const pdfText = t => String(t).replace(/[–—−]/g,"-").replace(/×/g,"x").replace(/·/g,"|").replace(/±/g,"+/-").replace(/’/g,"'").replace(/…/g,"...").replace(/[^\x20-\x7E]/g,"");
+
+function buildPDF(){
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({unit:"mm", format:"a4"});
+  const W = 210, H = 297, M = 14, CW = W - 2*M;
+  const COL = {ink:[27,34,48], muted:[94,104,120], rule:[213,218,225], soft:[241,243,246],
+    hr:[46,139,87], aer:[31,138,138], lt:[201,138,11], vo2:[217,65,43]};
+  const t = parseFloat(state.test), r = parseFloat(state.retest);
+  const s1 = valid(t) ? speeds(t) : null, s2 = valid(r) ? speeds(r) : s1;
+  const age = Number(state.age), hr = validAge(age) ? zone2(age, state.maf) : null;
+  let y = M, page = 1;
+
+  const footer = () => {
+    doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(...COL.muted);
+    doc.text(pdfText("Pace calculations: Running Fatigue Factor method (aerobiccapacity.com). Zone 2: Maffetone MAF."), M, H-8);
+    doc.text("Page " + page, W-M, H-8, {align:"right"});
+  };
+  const newPage = () => { footer(); doc.addPage(); page++; y = M; };
+  const need = h => { if (y + h > H - 16) newPage(); };
+
+  // Header
+  doc.setFont("helvetica","bold"); doc.setFontSize(22); doc.setTextColor(...COL.ink);
+  doc.text("HYROX Running Program", M, y+7); y += 12;
+  doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.setTextColor(...COL.muted);
+  const bits = [];
+  if (valid(t)) bits.push("6-min test: " + t + " m");
+  bits.push("Week 4 retest: " + (valid(r) ? r + " m" : "not entered"));
+  if (validAge(age)) bits.push("Age: " + age);
+  doc.text(pdfText(bits.join("   |   ")), M, y); y += 7;
+
+  // Zones table
+  const colX = [M, M+46, M+46+(CW-46)/2];
+  doc.setFillColor(...COL.ink); doc.rect(M, y, CW, 7, "F");
+  doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(255,255,255);
+  doc.text("Zone", colX[0]+3, y+4.8); doc.text("Weeks 1-4", colX[1]+2, y+4.8); doc.text("Weeks 5-14", colX[2]+2, y+4.8);
+  y += 7;
+  const zoneRow = (key, label, sub, c1, c2, span) => {
+    doc.setFillColor(...COL.soft); doc.rect(M, y, CW, 11, "F");
+    doc.setFillColor(...COL[key]); doc.rect(M, y, 1.8, 11, "F");
+    doc.setFont("helvetica","bold"); doc.setFontSize(10.5); doc.setTextColor(...COL[key]); doc.text(label, colX[0]+4, y+5);
+    doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(...COL.muted); doc.text(pdfText(sub), colX[0]+4, y+9);
+    doc.setTextColor(...COL.ink);
+    const cell = (x, v) => { doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.text(pdfText(v[0]), x+2, y+5);
+      if (v[1]) { doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(...COL.muted); doc.text(pdfText(v[1]), x+2, y+9); doc.setTextColor(...COL.ink); } };
+    cell(colX[1], c1); if (!span) cell(colX[2], c2);
+    y += 11.6;
+  };
+  zoneRow("hr", "Zone 2 HR", "Zone 2 runs", hr ? [hr.text, "All weeks, stay at or below " + hr.high] : ["Enter age in app", ""], null, true);
+  for (const z of ["aer","lt","vo2"]) {
+    const v = s => { if (!s) return ["Enter test in app",""]; const p = pace(s[z]); return [p.main + " /km", p.fast + "-" + p.slow + " /km"]; };
+    zoneRow(z, ZONES[z].name, ZONES[z].desc, v(s1), valid(r) ? v(s2) : (s1 ? ["After retest", "uses Weeks 1-4 until then"] : v(null)));
+  }
+  y += 4;
+
+  // Program
+  const rightW = 44, leftX = M + 8, textW = CW - 8 - rightW - 4;
+  let cur = -1;
+  PROGRAM.forEach((s, i) => {
+    const sp = s.w <= 4 ? s1 : s2;
+    let note = s.note || "";
+    if (s.strides) note = `Warm up 5 min + ${s.strides} x 200m strides${sp ? " at " + pace(sp.vo2).main + " /km" : ""}. ` + note;
+    doc.setFontSize(8.5); const noteLines = note ? doc.splitTextToSize(pdfText(note), textW) : [];
+    const hasRange = s.zone && s.zone !== "hr" && sp;
+    const rowH = Math.max(10 + noteLines.length * 3.6, hasRange ? 12.5 : 10);
+    const headH = s.w !== cur ? 10 : 0;
+    need(headH + rowH);
+    if (s.w !== cur) {
+      cur = s.w;
+      doc.setFillColor(...COL.ink); doc.rect(M, y, CW, 7.5, "F");
+      doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(255,255,255);
+      doc.text(s.w === 0 ? "Before you start" : `Week ${s.w}  -  ${PHASES[s.w]}`, M+3, y+5.2);
+      if (s.w) { doc.setFont("helvetica","normal"); doc.setFontSize(8);
+        doc.text(s.w <= 4 ? "Paces from your test" : (valid(r) ? "Paces from your retest" : "Paces from your first test"), W-M-3, y+5.2, {align:"right"}); }
+      y += 9.5;
+    }
+    // tick box
+    doc.setDrawColor(...COL.muted); doc.setLineWidth(0.3); doc.rect(M+1, y+1.2, 4, 4);
+    // left text
+    doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...COL.muted);
+    doc.text(pdfText(s.run + "  |  " + s.title + (s.opt ? " (optional)" : "")), leftX, y+2.6);
+    doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(...(s.opt ? COL.muted : COL.ink));
+    doc.text(pdfText(s.work), leftX, y+7.3);
+    if (noteLines.length) { doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...COL.muted); doc.text(noteLines, leftX, y+11); }
+    // right column
+    const rx = W - M;
+    if (s.zone) {
+      const key = s.zone, label = key === "hr" ? "ZONE 2" : ZONES[key].name.toUpperCase();
+      doc.setFont("helvetica","bold"); doc.setFontSize(7.5); doc.setTextColor(...COL[key]); doc.text(label, rx, y+2.6, {align:"right"});
+      doc.setFontSize(11); doc.setTextColor(...COL.ink);
+      if (key === "hr") { doc.text(hr ? pdfText(hr.text) : "Enter age", rx, y+7.3, {align:"right"}); }
+      else if (sp) { const p = pace(sp[key]); doc.text(p.main + " /km", rx, y+7.3, {align:"right"});
+        doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...COL.muted); doc.text(p.fast + "-" + p.slow, rx, y+10.8, {align:"right"}); }
+      else { doc.text("Enter test", rx, y+7.3, {align:"right"}); }
+    }
+    y += rowH;
+    doc.setDrawColor(...COL.rule); doc.setLineWidth(0.2); doc.line(M, y-1, W-M, y-1);
+    y += 1;
+  });
+  footer();
+  return doc;
+}
+
+$("pdf").addEventListener("click", async ()=>{
+  const msg = $("pdfMsg");
+  if (!window.jspdf) { msg.textContent = "Still loading. Check your connection and try again in a moment."; return; }
+  if (!valid(parseFloat(state.test))) { msg.textContent = "Enter your 6-min test first so your paces are included."; return; }
+  let blob;
+  try { blob = buildPDF().output("blob"); } catch(e){ msg.textContent = "Couldn’t create the PDF. Please try again."; return; }
+  const name = "HYROX-Running-Program.pdf";
+  const file = new File([blob], name, {type:"application/pdf"});
+  if (navigator.canShare && navigator.canShare({files:[file]})) {
+    try { await navigator.share({files:[file], title:"HYROX Running Program"}); msg.textContent = ""; return; }
+    catch(e){ if (e && e.name === "AbortError") { msg.textContent = ""; return; } }
+  }
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a"); a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 10000);
+  msg.textContent = "PDF saved. Check your downloads.";
+});
 
 async function sendRow(distance){
   const res = await fetch(SHEET_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
