@@ -4,6 +4,11 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>HYROX Running Program</title>
+<link rel="manifest" href="manifest.webmanifest">
+<meta name="theme-color" content="#1B2230">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-title" content="HYROX Run">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Barlow:wght@400;500;600&display=swap" rel="stylesheet">
@@ -110,6 +115,10 @@ button,input{font:inherit;color:inherit}
 .calbtns{display:flex;flex-wrap:wrap;gap:8px}
 .warn{font-size:.85rem;color:var(--lt);margin:0 0 10px;min-height:0}
 .calmsg{font-size:.85rem;color:var(--muted);margin-top:8px}
+.install{margin:-8px 0 20px}
+.ihelp{margin-top:10px;border:1px solid var(--rule);background:var(--soft);border-radius:10px;padding:12px 14px;font-size:.9rem}
+.ihelp ol{margin:6px 0 6px 18px;padding:0}
+.ihelp small{color:var(--muted)}
 footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid var(--rule);padding-top:12px}
 .printhead{display:none}
 
@@ -126,7 +135,7 @@ footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid v
   :root{--bg:#fff;--soft:#F4F5F7;--ink:#000;--muted:#555;--rule:#CCC}
   body{font-size:10.5pt}
   .wrap{max-width:none;padding:0}
-  .inputs,.bar,.lede,.noprint,.send,.cal{display:none!important}
+  .inputs,.bar,.lede,.noprint,.send,.cal,.install{display:none!important}
   .printhead{display:block;margin:0 0 8px;font-size:10pt;color:#333}
   h1{font-size:26pt}
   .lane{padding:6px 10px;-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -145,6 +154,10 @@ footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid v
   <h1 id="title">HYROX Running Program</h1>
   <p class="lede">Enter your 6-minute test distance and the 14-week program sets your paces. Your entries and ticks stay saved on this device.</p>
   <p class="printhead" id="printhead"></p>
+  <div class="install" id="install" hidden>
+    <button class="btn" id="installBtn" type="button">📲 Add to Home Screen</button>
+    <div class="ihelp" id="ihelp" hidden></div>
+  </div>
 
   <section class="inputs" aria-label="Your test results">
     <label class="full">Athlete name
@@ -529,6 +542,39 @@ renderDays();
 
 render();
 updateCalHints();
+
+/* ============================ ADD TO HOME SCREEN ============================ */
+(function(){ try {
+  if("serviceWorker" in navigator) navigator.serviceWorker.register("sw.js").catch(()=>{});
+  const ua = navigator.userAgent;
+  const standalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  const isIOS = /iphone|ipad|ipod/i.test(ua) || (navigator.platform==="MacIntel" && navigator.maxTouchPoints>1);
+  const inApp = /FBAN|FBAV|FB_IAB|Instagram|Messenger|Line\//i.test(ua);
+  const box = $("install"), btn = $("installBtn"), help = $("ihelp");
+  let deferred = null;
+  if(standalone) return;                                  // already installed: keep button hidden
+  const showHelp = html => { help.innerHTML = html; help.hidden = false; };
+  if(inApp){
+    box.hidden = false;
+    btn.addEventListener("click", ()=> showHelp(`Open this page in ${isIOS?"Safari":"Chrome"} first: tap <b>⋯</b> (top right) then <b>Open in ${isIOS?"browser":"Chrome"}</b>. Then tap this button again.`));
+    return;
+  }
+  if(isIOS){
+    box.hidden = false;
+    btn.addEventListener("click", ()=> showHelp(`<b>Add to your iPhone Home Screen:</b><ol><li>Tap the <b>Share</b> button <b>⬆️</b> (bottom of Safari)</li><li>Tap <b>Add to Home Screen</b>, then <b>Add</b></li></ol><small>Do this before entering your details. Your iPhone keeps the app’s data separate from Safari.</small>`));
+  }
+  window.addEventListener("beforeinstallprompt", e=>{
+    e.preventDefault(); deferred = e; box.hidden = false;
+  });
+  btn.addEventListener("click", async ()=>{
+    if(!deferred) return;
+    deferred.prompt();
+    const choice = await deferred.userChoice.catch(()=>null);
+    deferred = null;
+    if(choice && choice.outcome==="accepted") box.hidden = true;
+  });
+  window.addEventListener("appinstalled", ()=>{ box.hidden = true; });
+} catch(e){ /* install button is optional */ } })();
 </script>
 </body>
 </html>
