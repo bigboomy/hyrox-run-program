@@ -1,14 +1,29 @@
 {
-  "name": "HYROX Running Program",
-  "short_name": "HYROX Run",
+  "name": "The M Method – HYROX Running Program",
+  "short_name": "M Method",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
-  "background_color": "#141922",
-  "theme_color": "#1B2230",
+  "background_color": "#14181F",
+  "theme_color": "#14161A",
   "icons": [
-    { "src": "icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" }
+    {
+      "src": "icon-192.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
   ]
 }
