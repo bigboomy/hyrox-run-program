@@ -495,8 +495,7 @@ function shareLines(i){
   else if(s.test && s.w===4 && valid(r)) target = `${r} m in 6 minutes`;
   return {
     top: (s.w===0 ? "BEFORE YOU START" : `WEEK ${s.w} · ${PHASES[s.w].toUpperCase()}`) + ` · ${s.run.toUpperCase()}`,
-    work: s.work, target, key,
-    date: new Date().toLocaleDateString(undefined,{day:"numeric",month:"long",year:"numeric"})
+    work: s.work, target, key
   };
 }
 
@@ -519,7 +518,7 @@ function drawShare(canvas, i){
     if(line) lines.push(line);
     if(lines.length <= 2) break;
   }
-  const H = PAD + 46 + lines.length*(size+6) + 74 + 44 + 80 + PAD;
+  const H = PAD + 46 + lines.length*(size+6) + 44 + 40 + 80 + PAD;
   canvas.width = W; canvas.height = H;
   ctx.clearRect(0,0,W,H);
   ctx.shadowColor = "rgba(0,0,0,.55)";
@@ -535,11 +534,8 @@ function drawShare(canvas, i){
   y += 58;
   if(L.target){ ctx.fillStyle = accent; ctx.font = `700 55px "Barlow", Arial, sans-serif`; ctx.fillText(L.target, x, y); }
   y += 48;
-  ctx.fillStyle = fg; ctx.globalAlpha = .75; ctx.font = `500 30px "Barlow", Arial, sans-serif`;
-  ctx.fillText(L.date, x, y);
-  ctx.globalAlpha = 1;
   // brand mark + wordmark
-  y += 70;
+  y += 40;
   const markH = 84, markW = markH * 565/900;
   if(logoImg && logoImg.complete && logoImg.naturalWidth){
     ctx.save(); ctx.shadowBlur = 0; ctx.drawImage(logoImg, x, y - markH + 10, markW, markH); ctx.restore();
