@@ -42,8 +42,8 @@ html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 "Barlow",system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
 .wrap{max-width:760px;margin:0 auto;padding:28px 18px 64px}
 h1,h2,h3,.cond{font-family:"Barlow Condensed","Arial Narrow",Arial,sans-serif;letter-spacing:.01em}
-.brand{display:flex;align-items:center;gap:12px;margin:0 0 4px}
-.brand img{width:44px;height:auto;flex:none}
+.brand{display:flex;align-items:center;gap:12px;margin:0 0 10px;background:#14161A;padding:14px 16px;border-radius:10px;width:fit-content}
+.brand img{width:52px;height:auto;flex:none;display:block}
 .brand .wm{font-family:"Barlow Condensed",Arial,sans-serif;font-weight:800;font-size:clamp(1.7rem,6.5vw,2.4rem);line-height:.95;letter-spacing:.04em;text-transform:uppercase}
 h1{font-size:clamp(1.5rem,5vw,2rem);line-height:1;margin:0 0 6px;font-weight:700;color:var(--muted)}
 .lede{color:var(--muted);margin:0 0 24px;max-width:60ch}
@@ -145,8 +145,9 @@ button,input{font:inherit;color:inherit}
 .maf label:has(input:checked){border-color:var(--hr)}
 .maf b{font-weight:600;color:var(--hr);margin-left:auto;padding-left:8px;white-space:nowrap}
 .mafnote{grid-column:1/-1;font-size:.85rem;color:var(--muted);margin:0}
-.sh{margin-top:4px;background:transparent;border:1px solid var(--rule);border-radius:6px;color:var(--muted);font-size:.75rem;padding:2px 7px;cursor:pointer}
-.sh:hover{color:var(--ink);border-color:var(--ink)}
+.sh{display:none}
+.sh.sh-below{display:block;margin:6px 0 0;grid-column:1/-1;justify-self:end;background:transparent;border:1px solid var(--rule);border-radius:6px;color:var(--muted);font-size:.75rem;padding:2px 7px;cursor:pointer}
+.sh.sh-below:hover{color:var(--ink);border-color:var(--ink)}
 .shmodal{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;padding:18px;z-index:50}
 .shmodal[hidden]{display:none}
 .shcard{background:var(--bg);border-radius:14px;padding:16px;max-width:420px;width:100%;max-height:90vh;overflow:auto}
@@ -192,8 +193,7 @@ footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid v
 <body>
 <main class="wrap">
   <div class="brand">
-    <img src="logo-gold.png" alt="" width="44" height="72" onerror="this.remove()">
-    <span class="wm">The M Method</span>
+    <img src="logo-white.png" alt="The M Method" width="52" height="83" onerror="this.remove()">
   </div>
   <h1 id="title">HYROX Running Program</h1>
   <p class="lede">Enter your 6-minute test distance and the 14-week program sets your paces. Your entries and ticks stay saved on this device.</p>
@@ -288,14 +288,13 @@ footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid v
       <div class="shprev"><canvas id="shCanvas" width="1080" height="600"></canvas></div>
       <div class="shrow">
         <button class="btn" id="shSave" type="button">⬇ Save / share image</button>
-        <button class="btn ghost" id="shFlip" type="button">Dark text</button>
         <button class="btn ghost" id="shClose" type="button">Close</button>
       </div>
       <p class="calmsg" id="shMsg" role="status"></p>
     </div>
   </div>
 
-  <footer><b>The M Method</b> &middot; HYROX Running Program. Pace calculations use the Running Fatigue Factor method by aerobiccapacity.com. Zone 2 uses the Maffetone (MAF) method.</footer>
+  <footer><span class="wm" style="font-size:1rem;letter-spacing:.03em;color:var(--ink)">The M Method</span> &middot; HYROX Running Program. Pace calculations use the Running Fatigue Factor method by aerobiccapacity.com. Zone 2 uses the Maffetone (MAF) method.</footer>
 </main>
 
 <script>
@@ -441,7 +440,8 @@ function render(){
       <input type="checkbox" id="${id}" ${checked?"checked":""} aria-label="Mark ${esc(s.run)} week ${s.w} done">
       <label class="what" for="${id}"><div class="run">${esc(s.run)}</div><div class="title">${esc(s.title)}</div>
         <div class="work">${esc(s.work)}</div>${note?`<div class="note">${esc(note)}</div>`:""}</label>
-      <div class="pace">${paceHtml}<button class="sh" type="button" data-i="${i}" aria-label="Share this session">⬆ Share</button></div></div>`;
+      <div class="pace">${paceHtml}<button class="sh" type="button" data-i="${i}" aria-label="Share this session">⬆ Share</button></div>
+      <button class="sh sh-below" type="button" data-i="${i}" aria-label="Share this session">⬆ Share</button></div>`;
   });
   html += "</section>";
   if(!hasT) html = `<div class="empty">Enter your 6-minute test distance above to see your paces.</div>` + html;
@@ -467,11 +467,12 @@ $("program").addEventListener("change", e=>{
 });
 $("reset").addEventListener("click", ()=>{ if(confirm("Clear all ticked sessions?")){ state.ticks={}; save(state); render(); } });
 /* ============================ SHARE IMAGE ============================ */
-let shIndex = 0, shLight = true;
+let shIndex = 0;
+const shLight = true; // white monotone only — the export is always white text + white logo, for a transparent overlay on any photo
 // the outline logo, recoloured to match the chosen text colour
 let logoImg = null, logoTone = null;
 function loadLogo(){
-  const tone = shLight ? "white" : "dark";
+  const tone = "white";
   if(logoTone === tone && logoImg) return Promise.resolve();
   return new Promise(done => {
     const img = new Image();
@@ -533,7 +534,7 @@ function drawShare(canvas, i){
   ctx.fillStyle = fg; ctx.font = `700 ${size}px "Barlow Condensed", "Arial Narrow", Arial, sans-serif`;
   lines.forEach(l => { y += size; ctx.fillText(l, x, y); y += 6; });
   y += 58;
-  if(L.target){ ctx.fillStyle = accent; ctx.font = `600 46px "Barlow", Arial, sans-serif`; ctx.fillText(L.target, x, y); }
+  if(L.target){ ctx.fillStyle = accent; ctx.font = `700 55px "Barlow", Arial, sans-serif`; ctx.fillText(L.target, x, y); }
   y += 48;
   ctx.fillStyle = fg; ctx.globalAlpha = .75; ctx.font = `500 30px "Barlow", Arial, sans-serif`;
   ctx.fillText(L.date, x, y);
@@ -560,10 +561,6 @@ $("program").addEventListener("click", e=>{
 });
 $("shClose").addEventListener("click", ()=>{ $("shModal").hidden = true; });
 $("shModal").addEventListener("click", e=>{ if(e.target === $("shModal")) $("shModal").hidden = true; });
-$("shFlip").addEventListener("click", async ()=>{
-  shLight = !shLight; $("shFlip").textContent = shLight ? "Dark text" : "White text";
-  await loadLogo(); drawShare($("shCanvas"), shIndex);
-});
 $("shSave").addEventListener("click", ()=>{
   const canvas = $("shCanvas"), msg = $("shMsg");
   canvas.toBlob(async blob=>{
