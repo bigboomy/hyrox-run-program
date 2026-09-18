@@ -43,7 +43,7 @@ body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 "Barlow",s
 .wrap{max-width:760px;margin:0 auto;padding:28px 18px 64px}
 h1,h2,h3,.cond{font-family:"Barlow Condensed","Arial Narrow",Arial,sans-serif;letter-spacing:.01em}
 .brand{display:flex;align-items:center;gap:12px;margin:0 0 4px}
-.brand svg{width:44px;height:44px;flex:none}
+.brand img{width:44px;height:auto;flex:none}
 .brand .wm{font-family:"Barlow Condensed",Arial,sans-serif;font-weight:800;font-size:clamp(1.7rem,6.5vw,2.4rem);line-height:.95;letter-spacing:.04em;text-transform:uppercase}
 h1{font-size:clamp(1.5rem,5vw,2rem);line-height:1;margin:0 0 6px;font-weight:700;color:var(--muted)}
 .lede{color:var(--muted);margin:0 0 24px;max-width:60ch}
@@ -192,7 +192,7 @@ footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid v
 <body>
 <main class="wrap">
   <div class="brand">
-    <svg viewBox="0 0 100 100" aria-hidden="true"><rect width="100" height="100" rx="22" fill="#E4B700"></rect><path d="M22 78 V26 L50 62 L78 26 V78" fill="none" stroke="#14161A" stroke-width="13" stroke-linecap="round" stroke-linejoin="round"></path></svg>
+    <img src="logo-gold.png" alt="" width="44" height="72" onerror="this.remove()">
     <span class="wm">The M Method</span>
   </div>
   <h1 id="title">HYROX Running Program</h1>
@@ -468,6 +468,18 @@ $("program").addEventListener("change", e=>{
 $("reset").addEventListener("click", ()=>{ if(confirm("Clear all ticked sessions?")){ state.ticks={}; save(state); render(); } });
 /* ============================ SHARE IMAGE ============================ */
 let shIndex = 0, shLight = true;
+// the outline logo, recoloured to match the chosen text colour
+let logoImg = null, logoTone = null;
+function loadLogo(){
+  const tone = shLight ? "white" : "dark";
+  if(logoTone === tone && logoImg) return Promise.resolve();
+  return new Promise(done => {
+    const img = new Image();
+    img.onload = () => { logoImg = img; logoTone = tone; done(); };
+    img.onerror = () => done();
+    img.src = tone === "white" ? "logo-white.png" : "logo-dark.png";
+  });
+}
 
 function shareLines(i){
   const s = PROGRAM[i];
@@ -507,7 +519,7 @@ function drawShare(canvas, i){
     if(line) lines.push(line);
     if(lines.length <= 2) break;
   }
-  const H = PAD + 46 + lines.length*(size+6) + 74 + 44 + 62 + PAD;
+  const H = PAD + 46 + lines.length*(size+6) + 74 + 44 + 80 + PAD;
   canvas.width = W; canvas.height = H;
   ctx.clearRect(0,0,W,H);
   ctx.shadowColor = shLight ? "rgba(0,0,0,.55)" : "rgba(255,255,255,.55)";
@@ -527,22 +539,19 @@ function drawShare(canvas, i){
   ctx.fillText(L.date, x, y);
   ctx.globalAlpha = 1;
   // brand mark + wordmark
-  y += 62;
-  const tile = 54;
-  ctx.fillStyle = "#E4B700";
-  if(ctx.roundRect){ ctx.beginPath(); ctx.roundRect(x, y-tile+8, tile, tile, 12); ctx.fill(); }
-  else ctx.fillRect(x, y-tile+8, tile, tile);
-  ctx.strokeStyle = "#14161A"; ctx.lineWidth = 7; ctx.lineCap = "round"; ctx.lineJoin = "round";
-  ctx.beginPath();
-  ctx.moveTo(x+13, y+0); ctx.lineTo(x+13, y-tile+20); ctx.lineTo(x+27, y-tile+38); ctx.lineTo(x+41, y-tile+20); ctx.lineTo(x+41, y+0);
-  ctx.stroke();
-  ctx.fillStyle = fg; ctx.font = `800 40px "Barlow Condensed", "Arial Narrow", Arial, sans-serif`;
-  ctx.fillText("THE M METHOD", x + tile + 18, y - 6);
+  y += 70;
+  const markH = 84, markW = markH * 565/900;
+  if(logoImg && logoImg.complete && logoImg.naturalWidth){
+    ctx.save(); ctx.shadowBlur = 0; ctx.drawImage(logoImg, x, y - markH + 10, markW, markH); ctx.restore();
+  }
+  ctx.fillStyle = fg; ctx.font = `800 42px "Barlow Condensed", "Arial Narrow", Arial, sans-serif`;
+  ctx.fillText("THE M METHOD", x + markW + 20, y - 14);
 }
 
 async function openShare(i){
   shIndex = i;
   try { await document.fonts.load('700 84px "Barlow Condensed"'); await document.fonts.load('600 40px "Barlow"'); } catch(e){}
+  await loadLogo();
   drawShare($("shCanvas"), i);
   $("shMsg").textContent = ""; $("shModal").hidden = false;
 }
@@ -551,8 +560,9 @@ $("program").addEventListener("click", e=>{
 });
 $("shClose").addEventListener("click", ()=>{ $("shModal").hidden = true; });
 $("shModal").addEventListener("click", e=>{ if(e.target === $("shModal")) $("shModal").hidden = true; });
-$("shFlip").addEventListener("click", ()=>{
-  shLight = !shLight; $("shFlip").textContent = shLight ? "Dark text" : "White text"; drawShare($("shCanvas"), shIndex);
+$("shFlip").addEventListener("click", async ()=>{
+  shLight = !shLight; $("shFlip").textContent = shLight ? "Dark text" : "White text";
+  await loadLogo(); drawShare($("shCanvas"), shIndex);
 });
 $("shSave").addEventListener("click", ()=>{
   const canvas = $("shCanvas"), msg = $("shMsg");
@@ -575,6 +585,24 @@ $("shSave").addEventListener("click", ()=>{
 // PDF core fonts only cover basic characters, so swap symbols for plain equivalents.
 const pdfText = t => String(t).replace(/[–—−]/g,"-").replace(/×/g,"x").replace(/·/g,"|").replace(/±/g,"+/-").replace(/’/g,"'").replace(/…/g,"...").replace(/[^\x20-\x7E]/g,"");
 
+// Rasterise the gold logo once so jsPDF can place it in the header.
+let pdfLogo = null;
+function loadPdfLogo(){
+  if(pdfLogo) return Promise.resolve();
+  return new Promise(done => {
+    const img = new Image();
+    img.onload = () => {
+      const c = document.createElement("canvas");
+      c.width = img.naturalWidth; c.height = img.naturalHeight;
+      c.getContext("2d").drawImage(img, 0, 0);
+      try { pdfLogo = c.toDataURL("image/png"); } catch(e){}
+      done();
+    };
+    img.onerror = () => done();
+    img.src = "logo-gold.png";
+  });
+}
+
 function buildPDF(){
   const { jsPDF } = window.jspdf;
   const doc = new jsPDF({unit:"mm", format:"a4"});
@@ -595,14 +623,14 @@ function buildPDF(){
   const need = h => { if (y + h > H - 16) newPage(); };
 
   // Header
-  // brand mark
-  doc.setFillColor(...COL.brand); doc.roundedRect(M, y, 13, 13, 3, 3, "F");
-  doc.setDrawColor(...COL.ink); doc.setLineWidth(1.7); doc.setLineJoin("round"); doc.setLineCap("round");
-  doc.lines([[0,-7],[3.6,4.6],[3.6,-4.6],[0,7]], M+2.9, y+10.1);
+  // brand mark (added as an image if the logo has been rasterised, otherwise text only)
+  const markW = 12.6, markH = markW * 900/546;
+  if(pdfLogo){ try { doc.addImage(pdfLogo, "PNG", M, y - 1, markW, markH); } catch(e){} }
+  const tx = M + markW + 5;
   doc.setFont("helvetica","bold"); doc.setFontSize(19); doc.setTextColor(...COL.ink);
-  doc.text("THE M METHOD", M+17, y+6.2);
+  doc.text("THE M METHOD", tx, y+8.5);
   doc.setFont("helvetica","normal"); doc.setFontSize(13); doc.setTextColor(...COL.muted);
-  doc.text("HYROX Running Program", M+17, y+11.8); y += 19;
+  doc.text("HYROX Running Program", tx, y+14.5); y += 23;
   doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.setTextColor(...COL.muted);
   const bits = [];
   if (valid(t)) bits.push("6-min test: " + t + " m");
@@ -686,6 +714,7 @@ $("pdf").addEventListener("click", async ()=>{
   const msg = $("pdfMsg");
   if (!window.jspdf) { msg.textContent = "Still loading. Check your connection and try again in a moment."; return; }
   if (!valid(parseFloat(state.test))) { msg.textContent = "Enter your 6-min test first so your paces are included."; return; }
+  await loadPdfLogo();
   let blob;
   try { blob = buildPDF().output("blob"); } catch(e){ msg.textContent = "Couldn’t create the PDF. Please try again."; return; }
   const name = "The-M-Method-HYROX-Running-Program.pdf";
