@@ -42,10 +42,9 @@ html{-webkit-text-size-adjust:100%}
 body{margin:0;background:var(--bg);color:var(--ink);font:400 16px/1.5 "Barlow",system-ui,-apple-system,"Segoe UI",Arial,sans-serif}
 .wrap{max-width:760px;margin:0 auto;padding:28px 18px 64px}
 h1,h2,h3,.cond{font-family:"Barlow Condensed","Arial Narrow",Arial,sans-serif;letter-spacing:.01em}
-.brand{display:flex;align-items:center;gap:12px;margin:0 0 10px;background:#14161A;padding:14px 16px;border-radius:10px;width:fit-content}
-.brand img{width:52px;height:auto;flex:none;display:block}
-.brand .wm{font-family:"Barlow Condensed",Arial,sans-serif;font-weight:800;font-size:clamp(1.7rem,6.5vw,2.4rem);line-height:.95;letter-spacing:.04em;text-transform:uppercase}
-h1{font-size:clamp(1.5rem,5vw,2rem);line-height:1;margin:0 0 6px;font-weight:700;color:var(--muted)}
+.brand{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 6px}
+.brand img{width:48px;height:auto;flex:none;display:block}
+h1{font-size:clamp(1.7rem,6vw,2.4rem);line-height:1;margin:0;font-weight:800;color:var(--brand)}
 .lede{color:var(--muted);margin:0 0 24px;max-width:60ch}
 button,input{font:inherit;color:inherit}
 :focus-visible{outline:3px solid var(--focus);outline-offset:2px}
@@ -68,7 +67,7 @@ button,input{font:inherit;color:inherit}
 .lane .z{font-family:"Barlow Condensed",Arial,sans-serif;font-weight:700;font-size:1.3rem;color:var(--c);padding-left:6px;line-height:1.1}
 .lane .z small{display:block;font-family:"Barlow",Arial,sans-serif;font-weight:500;font-size:.72rem;color:var(--muted)}
 .lane .p{font-family:"Barlow Condensed",Arial,sans-serif;font-size:1.9rem;font-weight:700;line-height:1}
-.lane .p span{display:block;font-family:"Barlow",Arial,sans-serif;font-size:.78rem;font-weight:500;color:var(--muted);margin-top:2px}
+.lane .p span{display:block;font-family:"Barlow",Arial,sans-serif;font-size:.94rem;font-weight:500;color:var(--muted);margin-top:2px}
 .lane .p.na{font-size:1rem;color:var(--muted);font-weight:600}
 .lanehead{display:grid;grid-template-columns:120px 1fr 1fr;padding:0 14px 4px;font-size:.78rem;color:var(--muted)}
 .hr{--c:var(--hr);--cb:var(--hr-bg)} .lane .p.span{grid-column:2/4} .aer{--c:var(--aer);--cb:var(--aer-bg)} .lt{--c:var(--lt);--cb:var(--lt-bg)} .vo2{--c:var(--vo2);--cb:var(--vo2-bg)}
@@ -93,7 +92,7 @@ button,input{font:inherit;color:inherit}
 .sess .pace{text-align:right;white-space:nowrap}
 .pill{display:inline-block;background:var(--cb);color:var(--c);font-weight:700;font-size:.75rem;border-radius:4px;padding:1px 7px;margin-bottom:2px}
 .sess .pace b{display:block;font-family:"Barlow Condensed",Arial,sans-serif;font-size:1.35rem;line-height:1}
-.sess .pace span{font-size:.78rem;color:var(--muted)}
+.sess .pace span{font-size:.94rem;color:var(--muted)}
 .sess.opt .work,.sess.opt .title{color:var(--muted)}
 .sess.opt .title::after{content:" (optional)";font-weight:400}
 .sess.test{background:var(--soft);border-radius:8px;padding:10px 8px;border-bottom:0;margin:4px 0}
@@ -193,9 +192,9 @@ footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid v
 <body>
 <main class="wrap">
   <div class="brand">
-    <img src="logo-white.png" alt="The M Method" width="52" height="83" onerror="this.remove()">
+    <h1 id="title">HYROX Running Program</h1>
+    <img src="logo-gold.png" alt="The M Method" width="48" height="77" onerror="this.remove()">
   </div>
-  <h1 id="title">HYROX Running Program</h1>
   <p class="lede">Enter your 6-minute test distance and the 14-week program sets your paces. Your entries and ticks stay saved on this device.</p>
   <p class="printhead" id="printhead"></p>
   <div class="install" id="install" hidden>
@@ -288,6 +287,7 @@ footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid v
       <div class="shprev"><canvas id="shCanvas" width="1080" height="600"></canvas></div>
       <div class="shrow">
         <button class="btn" id="shSave" type="button">⬇ Save / share image</button>
+        <button class="btn ghost" id="shMono" type="button">Monotone</button>
         <button class="btn ghost" id="shClose" type="button">Close</button>
       </div>
       <p class="calmsg" id="shMsg" role="status"></p>
@@ -468,17 +468,16 @@ $("program").addEventListener("change", e=>{
 $("reset").addEventListener("click", ()=>{ if(confirm("Clear all ticked sessions?")){ state.ticks={}; save(state); render(); } });
 /* ============================ SHARE IMAGE ============================ */
 let shIndex = 0;
-const shLight = true; // white monotone only — the export is always white text + white logo, for a transparent overlay on any photo
-// the outline logo, recoloured to match the chosen text colour
-let logoImg = null, logoTone = null;
+let shMono = false; // default: full colour (zone accent colours). Toggle switches to a single-colour white monotone version for overlaying on photos.
+// the white outline logo — used in both modes, since the export always sits on a transparent background
+let logoImg = null, logoLoaded = false;
 function loadLogo(){
-  const tone = "white";
-  if(logoTone === tone && logoImg) return Promise.resolve();
+  if(logoLoaded) return Promise.resolve();
   return new Promise(done => {
     const img = new Image();
-    img.onload = () => { logoImg = img; logoTone = tone; done(); };
+    img.onload = () => { logoImg = img; logoLoaded = true; done(); };
     img.onerror = () => done();
-    img.src = tone === "white" ? "logo-white.png" : "logo-dark.png";
+    img.src = "logo-white.png";
   });
 }
 
@@ -503,9 +502,9 @@ function shareLines(i){
 
 function drawShare(canvas, i){
   const L = shareLines(i);
-  const COL = {hr:"#3ECF8E", aer:"#4CC0C0", lt:"#E4B700", vo2:"#FF6B55", ink: shLight ? "#FFFFFF" : "#14161A"};
-  const fg = shLight ? "#FFFFFF" : "#14161A";
-  const accent = COL[L.key] || fg;
+  const COL = {hr:"#3ECF8E", aer:"#4CC0C0", lt:"#E4B700", vo2:"#FF6B55"};
+  const fg = "#FFFFFF";
+  const accent = shMono ? fg : (COL[L.key] || fg);
   const W = 1080, PAD = 70, BAR = 14, x = PAD + BAR + 34;
   const ctx = canvas.getContext("2d");
   // wrap the workout text, shrinking until it fits 2 lines
@@ -523,7 +522,7 @@ function drawShare(canvas, i){
   const H = PAD + 46 + lines.length*(size+6) + 74 + 44 + 80 + PAD;
   canvas.width = W; canvas.height = H;
   ctx.clearRect(0,0,W,H);
-  ctx.shadowColor = shLight ? "rgba(0,0,0,.55)" : "rgba(255,255,255,.55)";
+  ctx.shadowColor = "rgba(0,0,0,.55)";
   ctx.shadowBlur = 22; ctx.shadowOffsetY = 4;
   // accent bar
   ctx.fillStyle = accent; ctx.fillRect(PAD, PAD, BAR, H - 2*PAD);
@@ -550,7 +549,7 @@ function drawShare(canvas, i){
 }
 
 async function openShare(i){
-  shIndex = i;
+  shIndex = i; shMono = false; $("shMono").textContent = "Monotone";
   try { await document.fonts.load('700 84px "Barlow Condensed"'); await document.fonts.load('600 40px "Barlow"'); } catch(e){}
   await loadLogo();
   drawShare($("shCanvas"), i);
@@ -561,6 +560,9 @@ $("program").addEventListener("click", e=>{
 });
 $("shClose").addEventListener("click", ()=>{ $("shModal").hidden = true; });
 $("shModal").addEventListener("click", e=>{ if(e.target === $("shModal")) $("shModal").hidden = true; });
+$("shMono").addEventListener("click", ()=>{
+  shMono = !shMono; $("shMono").textContent = shMono ? "Colour" : "Monotone"; drawShare($("shCanvas"), shIndex);
+});
 $("shSave").addEventListener("click", ()=>{
   const canvas = $("shCanvas"), msg = $("shMsg");
   canvas.toBlob(async blob=>{
