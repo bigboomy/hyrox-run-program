@@ -144,6 +144,14 @@ button,input{font:inherit;color:inherit}
 .maf label:has(input:checked){border-color:var(--hr)}
 .maf b{font-weight:600;color:var(--hr);margin-left:auto;padding-left:8px;white-space:nowrap}
 .mafnote{grid-column:1/-1;font-size:.85rem;color:var(--muted);margin:0}
+/* locked state: structure stays readable, paces are blurred until unlocked */
+.locked .lane.vo2 .p,
+.locked .sess .pace b,
+.locked .sess .pace span{filter:blur(7px);user-select:none;pointer-events:none}
+.locked .cal,.locked #pdf,.locked .sh{display:none!important}
+.lockmsg{border:2px solid var(--brand);background:var(--soft);border-radius:10px;padding:12px 14px;margin:0 0 14px;font-size:.9rem}
+.lockmsg b{display:block;font-family:"Barlow Condensed",Arial,sans-serif;font-size:1.25rem;margin-bottom:2px}
+body:not(.locked) .lockmsg{display:none}
 .sh{display:none}
 .sh.sh-below{display:block;margin:6px 0 0;grid-column:1/-1;justify-self:end;background:transparent;border:1px solid var(--rule);border-radius:6px;color:var(--muted);font-size:.75rem;padding:2px 7px;cursor:pointer}
 .sh.sh-below:hover{color:var(--ink);border-color:var(--ink)}
@@ -202,6 +210,11 @@ footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid v
     <div class="ihelp" id="ihelp" hidden></div>
   </div>
 
+  <div class="lockmsg" id="lockMsg">
+    <b>🔒 Unlock your paces</b>
+    Your program structure is below. Enter your details and tap <b style="display:inline;font-size:1rem">Unlock my program</b> to reveal your session paces, calendar export and PDF.
+  </div>
+
   <section class="inputs" aria-label="Your test results">
     <label>Athlete name
       <input id="name" type="text" autocomplete="name" placeholder="Your name">
@@ -232,7 +245,7 @@ footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid v
   </section>
 
   <details class="fold send" id="sendBox">
-    <summary><span class="sum-t">📤 Send results to your coach</span><span class="sum-s" id="sendSum"></span></summary>
+    <summary><span class="sum-t" id="sendTitle">📤 Send results to your coach</span><span class="sum-s" id="sendSum"></span></summary>
     <p>Sends your name, email and test distances. Sending the same result again won’t create a duplicate.</p>
     <div class="inputs" style="margin:0">
       <label class="full">Email
@@ -379,6 +392,16 @@ const KEY="hyroxRunProgram.v1";
 function load(){ try{ return JSON.parse(localStorage.getItem(KEY))||{}; }catch(e){ return {}; } }
 function save(s){ try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} }
 let state = Object.assign({name:"",age:"",maf:"0",sent:"",email:"",test:"",retest:"",ticks:{},days:[],start:""}, load());
+// Existing athletes (anyone who already had a test entered before the lock existed) stay unlocked.
+if(state.unlocked === undefined) state.unlocked = !!state.test;
+
+function applyLock(){
+  const locked = !state.unlocked;
+  document.body.classList.toggle("locked", locked);
+  $("sendTitle").textContent = locked ? "🔓 Unlock your program" : "📤 Send results to your coach";
+  $("send").textContent = locked ? "Unlock my program" : "Save my results";
+  $("sendBox").open = locked;
+}
 
 /* ============================ RENDER ============================ */
 const $ = id => document.getElementById(id);
@@ -748,7 +771,11 @@ $("send").addEventListener("click", async ()=>{
     if(results.some(x => x==="error" || x==="invalid")) say("Couldn’t save. Check your details and try again.", false);
     else if(results.every(x => x==="duplicate")) say("Already saved. Nothing new to send.", true);
     else say("Saved. Thanks!", true);
-    if(!results.some(x => x==="error" || x==="invalid")){ state.sent = dists.join(" m, ")+" m"; save(state); updateSummaries(); }
+    if(!results.some(x => x==="error" || x==="invalid")){
+      state.sent = dists.join(" m, ")+" m";
+      if(!state.unlocked){ state.unlocked = true; say("Unlocked. Your paces are below.", true); }
+      save(state); updateSummaries(); applyLock();
+    }
   }catch(e){ st.textContent=""; say("Couldn’t reach the sheet. Check your connection and try again.", false); }
   finally{ $("send").disabled = false; }
 });
@@ -907,6 +934,7 @@ renderDays();
 render();
 updateCalHints();
 updateSummaries();
+applyLock();
 
 /* ============================ ADD TO HOME SCREEN ============================ */
 (function(){ try {
