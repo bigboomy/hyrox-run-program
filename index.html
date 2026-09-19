@@ -3,12 +3,12 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>The M Method – HYROX Running Program</title>
+<title>@boomwilliams – HYROX Running Program</title>
 <link rel="manifest" href="manifest.webmanifest">
 <meta name="theme-color" content="#14161A">
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="M Method">
+<meta name="apple-mobile-web-app-title" content="@boomwilliams">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -201,7 +201,7 @@ footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid v
 <main class="wrap">
   <div class="brand">
     <h1 id="title">HYROX Running Program</h1>
-    <img src="logo-gold.png" alt="The M Method" width="48" height="77" onerror="this.remove()">
+    <img src="logo-gold.png" alt="@boomwilliams" width="48" height="77" onerror="this.remove()">
   </div>
   <p class="lede">Enter your 6-minute test distance and the 14-week program sets your paces. Your entries and ticks stay saved on this device.</p>
   <p class="printhead" id="printhead"></p>
@@ -307,7 +307,7 @@ footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid v
     </div>
   </div>
 
-  <footer><span class="wm" style="font-size:1rem;letter-spacing:.03em;color:var(--ink)">The M Method</span> &middot; HYROX Running Program. Pace calculations use the Running Fatigue Factor method by aerobiccapacity.com. Zone 2 uses the Maffetone (MAF) method.</footer>
+  <footer><span class="wm" style="font-size:1rem;letter-spacing:.03em;color:var(--ink)">@boomwilliams</span> &middot; HYROX Running Program. Pace calculations use the Running Fatigue Factor method by aerobiccapacity.com. Zone 2 uses the Maffetone (MAF) method.</footer>
 </main>
 
 <script>
@@ -563,8 +563,8 @@ function drawShare(canvas, i){
   if(logoImg && logoImg.complete && logoImg.naturalWidth){
     ctx.save(); ctx.shadowBlur = 0; ctx.drawImage(logoImg, x, y - markH + 10, markW, markH); ctx.restore();
   }
-  ctx.fillStyle = fg; ctx.font = `800 42px "Barlow Condensed", "Arial Narrow", Arial, sans-serif`;
-  ctx.fillText("THE M METHOD", x + markW + 20, y - 14);
+  ctx.fillStyle = fg; ctx.font = `700 42px "Barlow", Arial, sans-serif`;
+  ctx.fillText("@boomwilliams", x + markW + 20, y - 14);
 }
 
 async function openShare(i){
@@ -634,7 +634,7 @@ function buildPDF(){
 
   const footer = () => {
     doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(...COL.muted);
-    doc.text(pdfText("The M Method  |  Pace calculations: Running Fatigue Factor method (aerobiccapacity.com). Zone 2: Maffetone MAF."), M, H-8);
+    doc.text(pdfText("@boomwilliams  |  Pace calculations: Running Fatigue Factor method (aerobiccapacity.com). Zone 2: Maffetone MAF."), M, H-8);
     doc.text("Page " + page, W-M, H-8, {align:"right"});
   };
   const newPage = () => { footer(); doc.addPage(); page++; y = M; };
@@ -646,7 +646,7 @@ function buildPDF(){
   if(pdfLogo){ try { doc.addImage(pdfLogo, "PNG", M, y - 1, markW, markH); } catch(e){} }
   const tx = M + markW + 5;
   doc.setFont("helvetica","bold"); doc.setFontSize(19); doc.setTextColor(...COL.ink);
-  doc.text("THE M METHOD", tx, y+8.5);
+  doc.text("@boomwilliams", tx, y+8.5);
   doc.setFont("helvetica","normal"); doc.setFontSize(13); doc.setTextColor(...COL.muted);
   doc.text("HYROX Running Program", tx, y+14.5); y += 23;
   doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.setTextColor(...COL.muted);
@@ -735,10 +735,10 @@ $("pdf").addEventListener("click", async ()=>{
   await loadPdfLogo();
   let blob;
   try { blob = buildPDF().output("blob"); } catch(e){ msg.textContent = "Couldn’t create the PDF. Please try again."; return; }
-  const name = "The-M-Method-HYROX-Running-Program.pdf";
+  const name = "boomwilliams-HYROX-Running-Program.pdf";
   const file = new File([blob], name, {type:"application/pdf"});
   if (navigator.canShare && navigator.canShare({files:[file]})) {
-    try { await navigator.share({files:[file], title:"The M Method – HYROX Running Program"}); msg.textContent = ""; return; }
+    try { await navigator.share({files:[file], title:"@boomwilliams – HYROX Running Program"}); msg.textContent = ""; return; }
     catch(e){ if (e && e.name === "AbortError") { msg.textContent = ""; return; } }
   }
   const url = URL.createObjectURL(blob);
@@ -862,7 +862,7 @@ function buildEvents(fromWeek, toWeek, includeTest){
     if(s.strides){ note = `Warm up 5 min + ${s.strides} × 200m strides${sp?" at "+pace(sp.vo2).main+" /km":""}. ` + note; }
     if(note) desc.push(note);
     desc.push(`Week ${s.w===0?"0 (before you start)":s.w}${s.w?" – "+PHASES[s.w]:""}`);
-    desc.push("The M Method – open your program: " + APP_URL);
+    desc.push("@boomwilliams – open your program: " + APP_URL);
     events.push({uid:`hyrox-w${s.w}-r${runNo}-${ymd(start)}@bigboomy.github.io`, date, title, desc:desc.join("\n")});
   });
   return events;
@@ -870,7 +870,7 @@ function buildEvents(fromWeek, toWeek, includeTest){
 
 function buildICS(events){
   const now = new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d{3}/,"");
-  const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//The M Method//HYROX Running Program//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH","X-WR-CALNAME:The M Method – HYROX Running Program"];
+  const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//boomwilliams//HYROX Running Program//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH","X-WR-CALNAME:@boomwilliams – HYROX Running Program"];
   events.forEach(e=>{
     lines.push("BEGIN:VEVENT","UID:"+e.uid,"DTSTAMP:"+now,
       "DTSTART;VALUE=DATE:"+ymd(e.date),"DTEND;VALUE=DATE:"+ymd(addDays(e.date,1)),
