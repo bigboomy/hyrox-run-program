@@ -186,6 +186,10 @@ body.locked .strip{display:none}
 .ihelp ol{margin:6px 0 6px 18px;padding:0}
 .ihelp small{color:var(--muted)}
 footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid var(--rule);padding-top:12px}
+footer .credits{font-family:"Barlow Condensed",Arial,sans-serif;font-size:1.25rem;font-weight:700;color:var(--ink);margin:0 0 6px}
+footer .ig{display:inline-flex;align-items:center;gap:5px;color:var(--brand);text-decoration:none;border-bottom:2px solid transparent}
+footer .ig:hover,footer .ig:focus-visible{border-bottom-color:var(--brand)}
+footer .small{margin:0}
 .printhead{display:none}
 
 @media (max-width:520px){
@@ -332,7 +336,13 @@ footer{margin-top:40px;font-size:.8rem;color:var(--muted);border-top:1px solid v
     </div>
   </div>
 
-  <footer><span class="wm" style="font-size:1rem;letter-spacing:.03em;color:var(--ink)">@boomwilliams</span> &middot; HYROX Running Program. Pace calculations use the Running Fatigue Factor method by aerobiccapacity.com. Zone 2 uses the Maffetone (MAF) method.</footer>
+  <footer>
+    <p class="credits">Prepared by
+      <a class="ig" href="https://www.instagram.com/boomwilliams/" target="_blank" rel="noopener">📸 @boomwilliams</a> and
+      <a class="ig" href="https://www.instagram.com/scotty_lev10/" target="_blank" rel="noopener">📸 @scotty_lev10</a>
+    </p>
+    <p class="small">HYROX Running Program. Pace calculations use the Running Fatigue Factor method by aerobiccapacity.com. Zone 2 uses the Maffetone (MAF) method.</p>
+  </footer>
 </main>
 
 <script src="app.js" defer></script>
