@@ -275,9 +275,11 @@ function shareLines(i){
   else if(s.zone) target = ZONES[s.zone].name;
   else if(s.test && s.w===0 && valid(t)) target = `${t} m in 6 minutes`;
   else if(s.test && s.w===4 && valid(r)) target = `${r} m in 6 minutes`;
+  const e = state.km["s"+i];
   return {
     top: (s.w===0 ? "BEFORE YOU START" : `WEEK ${s.w} · ${PHASES[s.w].toUpperCase()}`) + ` · ${s.run.toUpperCase()}`,
-    work: s.work, target, key
+    work: s.work, target, key,
+    km: e && e.km > 0 ? km2(e.km) : null
   };
 }
 
@@ -300,7 +302,9 @@ function drawShare(canvas, i){
     if(line) lines.push(line);
     if(lines.length <= 2) break;
   }
-  const H = PAD + 46 + lines.length*(size+6) + 44 + 40 + 80 + PAD;
+  const distSize = Math.round(size * 1.2);   // 20% larger than the workout line
+  const distBlock = L.km ? distSize + 24 : 0;
+  const H = PAD + 46 + lines.length*(size+6) + 44 + 40 + distBlock + 80 + PAD;
   canvas.width = W; canvas.height = H;
   ctx.clearRect(0,0,W,H);
   ctx.shadowColor = "rgba(0,0,0,.55)";
@@ -316,6 +320,17 @@ function drawShare(canvas, i){
   y += 58;
   if(L.target){ ctx.fillStyle = accent; ctx.font = `700 55px "Barlow", Arial, sans-serif`; ctx.fillText(L.target, x, y); }
   y += 48;
+  // logged distance — the hero number when the athlete has entered one
+  if(L.km){
+    y += distSize;
+    ctx.fillStyle = fg; ctx.font = `800 ${distSize}px "Barlow Condensed", "Arial Narrow", Arial, sans-serif`;
+    const num = L.km;
+    ctx.fillText(num, x, y);
+    const nw = ctx.measureText(num).width;
+    ctx.fillStyle = accent; ctx.font = `700 ${Math.round(distSize*0.42)}px "Barlow Condensed", "Arial Narrow", Arial, sans-serif`;
+    ctx.fillText("KM", x + nw + 14, y);
+    y += 24;
+  }
   // brand mark + wordmark
   y += 40;
   const markH = 84, markW = markH * 565/900;
