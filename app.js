@@ -363,16 +363,18 @@ function drawProgress(canvas){
   ctx.fillStyle = accent; ctx.font = `600 38px "Barlow", Arial, sans-serif`;
   ctx.fillText(`WEEK ${cur.w} \u00b7 ${PHASES[cur.w].toUpperCase()}`, x, y); y += 40;
 
+  // this week is the hero number
   ctx.fillStyle = fg; ctx.font = `800 210px "Barlow Condensed", "Arial Narrow", Arial, sans-serif`;
-  ctx.fillText(km2(p.total), x, y + 150); y += 168;
+  ctx.fillText(km2(p.week), x, y + 150); y += 168;
   ctx.fillStyle = accent; ctx.font = `700 60px "Barlow Condensed", "Arial Narrow", Arial, sans-serif`;
-  ctx.fillText("KM", x, y + 52); y += 110;
+  ctx.fillText("KM THIS WEEK", x, y + 52); y += 116;
 
   ctx.fillStyle = fg; ctx.font = `800 96px "Barlow Condensed", "Arial Narrow", Arial, sans-serif`;
   ctx.fillText(`RUNS: ${p.runs}`, x, y + 20); y += 74;
 
-  ctx.fillStyle = fg; ctx.globalAlpha = .85; ctx.font = `600 46px "Barlow", Arial, sans-serif`;
-  ctx.fillText(`${km2(p.week)} km this week`, x, y + 20); ctx.globalAlpha = 1; y += 100;
+  // total sits underneath, smaller
+  ctx.fillStyle = fg; ctx.globalAlpha = .85; ctx.font = `600 52px "Barlow Condensed", "Arial Narrow", Arial, sans-serif`;
+  ctx.fillText(`${km2(p.total)} km total`, x, y + 20); ctx.globalAlpha = 1; y += 100;
 
   // logo + handle, right aligned
   const markH = 92, markW = markH * 565/900;
