@@ -8,7 +8,7 @@ const SHEET_URL = "https://script.google.com/macros/s/AKfycbzeVEf0PtRQXtfWDlQWQb
    ============================================================ */
 const PHASES = {0:"Pre-program",1:"Base",2:"Base",3:"Base",4:"Base",5:"Base",6:"Deload",7:"Build",8:"Build",9:"Build",10:"Build",11:"Build",12:"Race specific",13:"Race specific",14:"Race week"};
 const PROGRAM = [
- {w:0, run:"Test", title:"6-min test", zone:null, work:"6-minute max distance test", note:"Run as far as you can in 6 minutes, then enter the distance above.", test:true},
+ {w:0, run:"Test", title:"6-min test", zone:null, work:"6-minute max distance test", note:"Warm-up: 10-minute easy Zone 2 jog. The test: 6-minute hard effort. Log it: record your total distance for the 6-minute portion, so your Aerobic, Threshold and VO2max zones can be calculated.", test:true},
  {w:1, run:"Run 1", title:"Speed", zone:"vo2", work:"8 × 400m", note:"Warm up 5 min. 90 sec rest between reps."},
  {w:1, run:"Run 2", title:"Zone 2", zone:"hr", work:"30 min continuous"},
  {w:1, run:"Run 3", title:"Distance", zone:"aer", work:"4km steady", opt:true},
@@ -20,7 +20,7 @@ const PROGRAM = [
  {w:3, run:"Run 3", title:"Split distance", zone:"aer", work:"3 × 2km", note:"1 min walk between.", opt:true},
  {w:4, run:"Run 1", title:"Speed", zone:"vo2", work:"2×800, 2×600, 2×400", note:"Warm up 5 min. 1 min rest between reps."},
  {w:4, run:"Run 2", title:"Zone 2", zone:"hr", work:"35–45 min continuous"},
- {w:4, run:"Run 3", title:"Retest", zone:null, work:"6-minute max distance retest", note:"Enter the distance above. It updates your paces for Weeks 5–14.", test:true},
+ {w:4, run:"Run 3", title:"Retest", zone:null, work:"6-minute max distance retest", note:"Same as the first test: 10-minute easy Zone 2 warm-up, then 6 minutes hard. Enter the distance above — it updates your paces for Weeks 5–14.", test:true},
  {w:5, run:"Run 1", title:"Speed", zone:"vo2", work:"1000, 800, 600, 400 ×2 rounds", note:"Warm up 5 min. 1 min between reps, 3 min between rounds."},
  {w:5, run:"Run 2", title:"Zone 2", zone:"hr", work:"40–50 min continuous"},
  {w:5, run:"Run 3", title:"Distance", zone:"aer", work:"6km steady", opt:true},
@@ -46,6 +46,13 @@ const PROGRAM = [
  {w:14, run:"Run 1", title:"Steady intervals", zone:"aer", work:"8 × 400m", strides:2, note:"90 sec rest between reps."},
  {w:14, run:"Run 2", title:"Recovery", zone:"hr", work:"20–30 min continuous"}
 ];
+// Coaches shown in the picker. Add an entry here and it appears in the app.
+const COACHES = [
+  {name: "Mitch Williams", handle: "@boomwilliams"},
+  {name: "Scott Wilson",   handle: "@scotty_lev10"}
+];
+const DEFAULT_TAG = "@boomwilliams";   // used on images when no coach is chosen
+
 const ZONES = {hr:{name:"Zone 2 HR",desc:"Zone 2 runs"}, aer:{name:"Aerobic",desc:"Steady & distance runs"}, lt:{name:"Threshold",desc:"LT, race pace"}, vo2:{name:"VO2max",desc:"Speed reps"}};
 
 /* ============================ CALCULATIONS ============================
@@ -105,9 +112,15 @@ const km2 = v => (Math.round(Number(v)*100)/100).toFixed(2);
 const KEY="hyroxRunProgram.v1";
 function load(){ try{ return JSON.parse(localStorage.getItem(KEY))||{}; }catch(e){ return {}; } }
 function save(s){ try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} }
-let state = Object.assign({name:"",age:"",maf:"0",sent:"",email:"",test:"",retest:"",ticks:{},km:{},days:[],start:""}, load());
+let state = Object.assign({name:"",age:"",maf:"0",sent:"",email:"",coach:"",test:"",retest:"",ticks:{},km:{},days:[],start:""}, load());
 // Existing athletes (anyone who already had a test entered before the lock existed) stay unlocked.
 if(state.unlocked === undefined) state.unlocked = !!state.test;
+
+function renderCoaches(){
+  const box = $("coachPick");
+  box.innerHTML = COACHES.map(c => `<label class="coach"><input type="radio" name="coach" value="${c.handle}" ${state.coach===c.handle?"checked":""}><span>${c.name} <em>${c.handle}</em></span></label>`).join("")
+    + `<button class="btn ghost coachclear" id="coachClear" type="button" ${state.coach?"":"hidden"}>Clear</button>`;
+}
 
 function applyLock(){
   const locked = !state.unlocked;
@@ -212,6 +225,15 @@ $("program").addEventListener("change", e=>{
   $("progress").textContent = `${d} of ${PROGRAM.length} sessions done`;
   updateStrip(); queueSync();
 });
+$("coachPick").addEventListener("change", e=>{
+  if(e.target.name !== "coach") return;
+  state.coach = e.target.value; save(state); renderCoaches(); queueSync();
+});
+$("coachPick").addEventListener("click", e=>{
+  if(e.target.id !== "coachClear") return;
+  state.coach = ""; save(state); renderCoaches(); queueSync();
+});
+
 $("reset").addEventListener("click", ()=>{ if(confirm("Clear all ticked sessions and logged distances?")){ state.ticks={}; state.km={}; save(state); render(); updateStrip(); queueSync(); } });
 
 // logging a distance also ticks the session off
@@ -338,7 +360,7 @@ function drawShare(canvas, i){
     ctx.save(); ctx.shadowBlur = 0; ctx.drawImage(logoImg, x, y - markH + 10, markW, markH); ctx.restore();
   }
   ctx.fillStyle = fg; ctx.font = `700 42px "Barlow", Arial, sans-serif`;
-  ctx.fillText("@boomwilliams", x + markW + 20, y - 14);
+  ctx.fillText(state.coach || DEFAULT_TAG, x + markW + 20, y - 14);
 }
 
 // Progress card: story size, content down the right edge so the photo shows through on the left.
@@ -379,7 +401,7 @@ function drawProgress(canvas){
   // logo + handle, right aligned
   const markH = 92, markW = markH * 565/900;
   ctx.font = `700 46px "Barlow", Arial, sans-serif`;
-  const handle = "@boomwilliams";
+  const handle = state.coach || DEFAULT_TAG;
   ctx.fillStyle = fg; ctx.fillText(handle, x, y + 40);
   if(logoImg && logoImg.complete && logoImg.naturalWidth){
     const tw = ctx.measureText(handle).width;
@@ -475,7 +497,7 @@ function buildPDF(){
 
   const footer = () => {
     doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(...COL.muted);
-    doc.text(pdfText("@boomwilliams  |  Pace calculations: Running Fatigue Factor method (aerobiccapacity.com). Zone 2: Maffetone MAF."), M, H-8);
+    doc.text(pdfText("Prepared by @boomwilliams and @scotty_lev10  |  Pace calculations: Running Fatigue Factor method (aerobiccapacity.com). Zone 2: Maffetone MAF."), M, H-8);
     doc.text("Page " + page, W-M, H-8, {align:"right"});
   };
   const newPage = () => { footer(); doc.addPage(); page++; y = M; };
@@ -487,9 +509,9 @@ function buildPDF(){
   if(pdfLogo){ try { doc.addImage(pdfLogo, "PNG", M, y - 1, markW, markH); } catch(e){} }
   const tx = M + markW + 5;
   doc.setFont("helvetica","bold"); doc.setFontSize(19); doc.setTextColor(...COL.ink);
-  doc.text("@boomwilliams", tx, y+8.5);
-  doc.setFont("helvetica","normal"); doc.setFontSize(13); doc.setTextColor(...COL.muted);
-  doc.text("HYROX Running Program", tx, y+14.5); y += 23;
+  doc.text("HYROX Running Program", tx, y+8.5);
+  doc.setFont("helvetica","normal"); doc.setFontSize(11); doc.setTextColor(...COL.muted);
+  doc.text(pdfText("Prepared by @boomwilliams and @scotty_lev10"), tx, y+14.5); y += 23;
   doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.setTextColor(...COL.muted);
   const bits = [];
   if (valid(t)) bits.push("6-min test: " + t + " m");
@@ -576,10 +598,10 @@ $("pdf").addEventListener("click", async ()=>{
   await loadPdfLogo();
   let blob;
   try { blob = buildPDF().output("blob"); } catch(e){ msg.textContent = "Couldn’t create the PDF. Please try again."; return; }
-  const name = "boomwilliams-HYROX-Running-Program.pdf";
+  const name = "HYROX-Running-Program.pdf";
   const file = new File([blob], name, {type:"application/pdf"});
   if (navigator.canShare && navigator.canShare({files:[file]})) {
-    try { await navigator.share({files:[file], title:"@boomwilliams – HYROX Running Program"}); msg.textContent = ""; return; }
+    try { await navigator.share({files:[file], title:"HYROX Running Program"}); msg.textContent = ""; return; }
     catch(e){ if (e && e.name === "AbortError") { msg.textContent = ""; return; } }
   }
   const url = URL.createObjectURL(blob);
@@ -610,13 +632,13 @@ async function syncProgress(){
   if(!entries.length) return;
   try{
     await fetch(SHEET_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
-      body: JSON.stringify({kind:"progress", name:state.name, email:state.email, entries})});
+      body: JSON.stringify({kind:"progress", name:state.name, email:state.email, coach:state.coach, entries})});
   }catch(e){ /* offline: the next change tries again */ }
 }
 
 async function sendRow(distance){
   const res = await fetch(SHEET_URL, {method:"POST", headers:{"Content-Type":"text/plain;charset=utf-8"},
-    body: JSON.stringify({name:state.name, email:state.email, distance, website:$("website").value})});
+    body: JSON.stringify({name:state.name, email:state.email, coach:state.coach, distance, website:$("website").value})});
   return (await res.json()).status;
 }
 $("send").addEventListener("click", async ()=>{
@@ -728,7 +750,7 @@ function buildEvents(fromWeek, toWeek, includeTest){
     if(s.strides){ note = `Warm up 5 min + ${s.strides} × 200m strides${sp?" at "+pace(sp.vo2).main+" /km":""}. ` + note; }
     if(note) desc.push(note);
     desc.push(`Week ${s.w===0?"0 (before you start)":s.w}${s.w?" – "+PHASES[s.w]:""}`);
-    desc.push("@boomwilliams – open your program: " + APP_URL);
+    desc.push("Prepared by @boomwilliams and @scotty_lev10 – open your program: " + APP_URL);
     events.push({uid:`hyrox-w${s.w}-r${runNo}-${ymd(start)}@bigboomy.github.io`, date, title, desc:desc.join("\n")});
   });
   return events;
@@ -736,7 +758,7 @@ function buildEvents(fromWeek, toWeek, includeTest){
 
 function buildICS(events){
   const now = new Date().toISOString().replace(/[-:]/g,"").replace(/\.\d{3}/,"");
-  const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//boomwilliams//HYROX Running Program//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH","X-WR-CALNAME:@boomwilliams – HYROX Running Program"];
+  const lines = ["BEGIN:VCALENDAR","VERSION:2.0","PRODID:-//boomwilliams//HYROX Running Program//EN","CALSCALE:GREGORIAN","METHOD:PUBLISH","X-WR-CALNAME:HYROX Running Program"];
   events.forEach(e=>{
     lines.push("BEGIN:VEVENT","UID:"+e.uid,"DTSTAMP:"+now,
       "DTSTART;VALUE=DATE:"+ymd(e.date),"DTEND;VALUE=DATE:"+ymd(addDays(e.date,1)),
@@ -796,6 +818,7 @@ $("cal2").addEventListener("click", ()=>{
 if(!state.start){ state.start = toISO(nextMonday()); save(state); }
 $("startDate").value = state.start;
 renderDays();
+renderCoaches();
 
 render();
 updateCalHints();
