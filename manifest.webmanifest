@@ -1,6 +1,6 @@
 {
-  "name": "@boomwilliams – HYROX Running Program",
-  "short_name": "@boomwilliams",
+  "name": "HYROX Run Program",
+  "short_name": "HYROX Run",
   "start_url": "./",
   "scope": "./",
   "display": "standalone",
