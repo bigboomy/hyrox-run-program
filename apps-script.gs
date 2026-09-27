@@ -1,7 +1,9 @@
 /** @boomwilliams – HYROX Run Program collector
- *  Results tab:  Timestamp, Name, Email, Distance (m), Coach   — same email + same distance is recorded once.
- *  Progress tab: Email, Name, Week, Run, Session, Km, Done, Logged on, Updated, Coach
- *                one row per session per athlete, updated in place.
+ *  Results tab:  Timestamp, Name, Email, Distance (m), Coach, Program   — same email + same distance is recorded once.
+ *  Progress tab: Email, Name, Week, Run, Session, Km, Done, Logged on, Updated, Coach, Program
+ *                one row per session per athlete PER PROGRAM, updated in place.
+ *                Blank Program on an old row means the 14-week block, so rows written
+ *                before the 8/12-week programs existed keep updating in place.
  */
 const SHEET_NAME = 'Results';
 const PROGRESS_SHEET = 'Progress';
@@ -29,8 +31,9 @@ function saveResult(d) {
     return out({ status: 'invalid' });
   }
 
-  const sh = sheet(SHEET_NAME, ['Timestamp', 'Name', 'Email', 'Distance (m)', 'Coach']);
+  const sh = sheet(SHEET_NAME, ['Timestamp', 'Name', 'Email', 'Distance (m)', 'Coach', 'Program']);
   header(sh, 5, 'Coach');
+  header(sh, 6, 'Program');
   const last = sh.getLastRow();
   if (last > 1) {
     const rows = sh.getRange(2, 3, last - 1, 2).getValues(); // Email, Distance
@@ -38,7 +41,7 @@ function saveResult(d) {
       return out({ status: 'duplicate' });
     }
   }
-  sh.appendRow([new Date(), name, email, distance, coach(d)]);
+  sh.appendRow([new Date(), name, email, distance, coach(d), prog(d)]);
   return out({ status: 'added' });
 }
 
@@ -50,17 +53,21 @@ function saveProgress(d) {
   if (!validEmail(email) || !entries.length) return out({ status: 'invalid' });
 
   const sh = sheet(PROGRESS_SHEET,
-    ['Email', 'Name', 'Week', 'Run', 'Session', 'Km', 'Done', 'Logged on', 'Updated', 'Coach']);
+    ['Email', 'Name', 'Week', 'Run', 'Session', 'Km', 'Done', 'Logged on', 'Updated', 'Coach', 'Program']);
   header(sh, 10, 'Coach');
+  header(sh, 11, 'Program');
   const who = coach(d);
+  const which = prog(d);
 
-  // index existing rows for this athlete by session, so each session keeps one row
+  // index existing rows for this athlete by session id, so each session keeps one row
   const last = sh.getLastRow();
-  const keyCol = {}; // "week|run" -> row number
+  const keyCol = {}; // "program|week|run" -> row number
   if (last > 1) {
-    const rows = sh.getRange(2, 1, last - 1, 4).getValues(); // Email, Name, Week, Run
+    const rows = sh.getRange(2, 1, last - 1, 11).getValues(); // through Program
     rows.forEach((r, i) => {
-      if (String(r[0]).toLowerCase() === email) keyCol[r[2] + '|' + r[3]] = i + 2;
+      if (String(r[0]).toLowerCase() !== email) return;
+      const p = String(r[10] || '').trim() || '14';   // blank = written before programs existed
+      keyCol[p + '|' + r[2] + '|' + r[3]] = i + 2;
     });
   }
 
@@ -72,8 +79,9 @@ function saveProgress(d) {
     const km = en.km === '' || en.km === null ? '' : Math.round(Number(en.km) * 100) / 100;
     if (!(week >= 0 && week <= 14) || !run) return;
     if (km !== '' && !(km >= 0 && km <= 80)) return;
-    const row = [email, name, week, run, clean(en.session, 60), km, en.done ? 'Yes' : '', en.on || '', now, who];
-    const at = keyCol[week + '|' + run];
+    const p = prog(en) || which;
+    const row = [email, name, week, run, clean(en.session, 60), km, en.done ? 'Yes' : '', en.on || '', now, who, p];
+    const at = keyCol[p + '|' + week + '|' + run];
     if (at) sh.getRange(at, 1, 1, row.length).setValues([row]);
     else appends.push(row);
   });
@@ -99,6 +107,12 @@ function validEmail(v) { return /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v); }
 function coach(d) {
   const c = String(d.coach || '').trim().slice(0, 40);
   return /^@[A-Za-z0-9._]+$/.test(c) ? c : '';
+}
+
+// Which program block the row belongs to: 14, 12 or 8 weeks.
+function prog(d) {
+  const p = String(d && d.prog || '').trim();
+  return (p === '14' || p === '12' || p === '8') ? p : '';
 }
 
 // Adds a column heading to an existing sheet that predates it, leaving data alone.
