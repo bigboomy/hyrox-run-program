@@ -1,6 +1,6 @@
 // Offline helper: always checks GitHub for the latest version first (skipping the
 // browser's 10-minute saved copy), and falls back to the last saved copy with no signal.
-const CACHE = "hyrox-run-v2";
+const CACHE = "hyrox-run-v3";
 
 self.addEventListener("install", () => self.skipWaiting());
 self.addEventListener("activate", e => {
