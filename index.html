@@ -172,6 +172,12 @@ body:not(.locked) .lockmsg{display:none}
 .logrow input:focus{border-color:var(--brand);outline:none}
 .logrow .unit{font-size:.85rem;color:var(--muted)}
 .logged{color:var(--done);font-weight:600}
+.progsel{margin:0 0 18px}
+.progsel h2{font-family:"Barlow Condensed",Arial,sans-serif;font-weight:800;font-size:1.15rem;letter-spacing:.02em;text-transform:uppercase;margin:0 0 8px}
+#progPick{display:flex;gap:8px;flex-wrap:wrap}
+#progPick .pg{font-family:"Barlow Condensed",Arial,sans-serif;font-weight:700;font-size:1.15rem;letter-spacing:.02em;padding:9px 20px;border:1px solid var(--rule);border-radius:999px;background:transparent;color:var(--muted);cursor:pointer}
+#progPick .pg.on{background:var(--brand);border-color:var(--brand);color:#141414}
+#progPick .pg:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .strip{border:1px solid var(--rule);border-radius:10px;padding:12px 14px;margin:0 0 18px;background:var(--soft)}
 .strip .nums{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline}
 .strip .n{font-family:"Barlow Condensed",Arial,sans-serif;font-weight:800;font-size:1.6rem;line-height:1}
@@ -235,7 +241,7 @@ footer .small{margin:0}
     <h1 id="title">HYROX Running Program</h1>
     <img src="logo-gold.png" alt="@boomwilliams" width="48" height="77" onerror="this.remove()">
   </div>
-  <p class="lede">Enter your 6-minute test distance and the 14-week program sets your paces. Your entries and ticks stay saved on this device.</p>
+  <p class="lede">Enter your 6-minute test distance, pick your program length, and every session gets its target pace. Your entries and ticks stay saved on this device.</p>
   <p class="printhead" id="printhead"></p>
   <div class="install" id="install" hidden>
     <button class="btn" id="installBtn" type="button">📲 Add to Home Screen</button>
@@ -270,7 +276,7 @@ footer .small{margin:0}
       <input id="test" type="number" inputmode="numeric" min="600" max="2600" placeholder="e.g. 1490">
       <span class="err" id="testErr"></span>
     </label>
-    <label class="big">Week 4 retest (metres)
+    <label class="big"><span id="retestLbl">Week 4 retest (metres)</span>
       <input id="retest" type="number" inputmode="numeric" min="600" max="2600" placeholder="After Week 4">
       <span class="err" id="retestErr"></span>
     </label>
@@ -293,8 +299,14 @@ footer .small{margin:0}
     <button class="btn" id="send" type="button">Save my results</button><span class="status" id="sendStatus" role="status"></span>
   </details>
 
+  <section class="progsel" aria-label="Choose your program length">
+    <h2>Program length</h2>
+    <div id="progPick" role="group" aria-label="Program length"></div>
+    <p class="hint">Pick the block that fits the time you have before race day. Your ticks and logged distances are saved separately for each, so switching is safe and you can switch back.</p>
+  </section>
+
   <section aria-label="Your training zones">
-    <div class="lanehead"><span>Zone</span><span>Weeks 1–4</span><span>Weeks 5–14</span></div>
+    <div class="lanehead"><span>Zone</span><span id="laneW1">Weeks 1–4</span><span id="laneW2">Weeks 5–14</span></div>
     <div class="lanes" id="lanes"></div>
     <p class="hint">Target pace per km, with the fast–slow range (±5% of speed) underneath. Zone 2 runs use heart rate (Maffetone MAF): 180 − age, adjusted for your training history. Stay at or below the top number.</p>
   </section>
