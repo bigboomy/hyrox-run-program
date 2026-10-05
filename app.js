@@ -342,6 +342,7 @@ function render(){
       if(cur!==-1) html += "</section>";
       cur = s.w;
       const src = s.w===0 ? "" : s.w<=PROG.retest ? "Paces from your test" : (hasR ? "Paces from your retest" : "Using first test until retest is entered");
+      if(s.w===0) html += `<a class="btn ghost trackbtn noprint" id="trackLink" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=running+track+near+me">\ud83d\udccd Find a running track near me</a>`;
       html += `<section class="week"><h2>${s.w===0?"Before you start":"Week "+s.w}<span class="phase">${s.w===0?"":PHASES[s.w]}</span><span class="src">${src}</span></h2>`;
     }
     const id = "s"+i, checked = !!state.ticks[id];
