@@ -4,7 +4,9 @@ const SHEET_URL = "https://script.google.com/macros/s/AKfycbzeVEf0PtRQXtfWDlQWQb
 /* ============================================================
    PROGRAM CONTENT — edit sessions here. Calculation code below.
    zone: "aer" | "lt" | "vo2" (pace) | "hr" (Zone 2 heart rate) | null (tests)
-   strides: number of 200m warm-up strides at VO2max pace
+   strides: number of 200m warm-up strides at VO2max pace (implies a 5 min warm-up)
+   warm: warm-up minutes. rest: rest between reps, e.g. "1 min", "60–90 sec". walk: true if the rest is a walk.
+   roundRest: rest between rounds. note: anything else worth saying.
    Three programs. retest = the last week that uses the FIRST test's paces;
    every week after it uses the retest paces.
    ============================================================ */
@@ -13,7 +15,7 @@ const RETEST_NOTE = "Same as the first test: 10-minute easy Zone 2 warm-up, then
 const TEST_SESSION   = {w:0, run:"Test", title:"6-min test", zone:null, work:"6-minute max distance test", note:TEST_NOTE, test:true};
 const RETEST_SESSION = {run:"Run 3", title:"Retest", zone:null, work:"6-minute max distance retest", note:RETEST_NOTE, test:true};
 const TWO_RUN_NOTE = "From here: 2 runs a week. Add compromised running and erg work, and prioritise leg recovery.";
-const RACE_PACE_NOTE = "1 min rest. Feel the pace and check your watch as little as possible.";
+const RACE_PACE_NOTE = "Feel the pace and check your watch as little as possible.";
 
 const PROGRAMS = {
  "14": {
@@ -21,41 +23,41 @@ const PROGRAMS = {
   phases:{0:"Pre-program",1:"Base",2:"Base",3:"Base",4:"Base",5:"Base",6:"Deload",7:"Build",8:"Build",9:"Build",10:"Build",11:"Build",12:"Race specific",13:"Race specific",14:"Race week"},
   sessions:[
    TEST_SESSION,
-   {w:1, run:"Run 1", title:"Speed", zone:"vo2", work:"8 × 400m", note:"Warm up 5 min. 90 sec rest between reps."},
+   {w:1, run:"Run 1", title:"Speed", zone:"vo2", work:"8 × 400m", warm:5, rest:"90 sec"},
    {w:1, run:"Run 2", title:"Zone 2", zone:"hr", work:"30 min continuous"},
    {w:1, run:"Run 3", title:"Distance", zone:"aer", work:"4km steady", opt:true},
-   {w:2, run:"Run 1", title:"Speed", zone:"vo2", work:"10 × 400m", note:"Warm up 5 min. 60–90 sec rest between reps."},
+   {w:2, run:"Run 1", title:"Speed", zone:"vo2", work:"10 × 400m", warm:5, rest:"60–90 sec"},
    {w:2, run:"Run 2", title:"Zone 2", zone:"hr", work:"30–40 min continuous"},
    {w:2, run:"Run 3", title:"Distance", zone:"aer", work:"4km steady", opt:true},
-   {w:3, run:"Run 1", title:"Speed", zone:"vo2", work:"800, 600, 400, 200 ×2 rounds", note:"Warm up 5 min. 1 min between reps, 3 min between rounds."},
+   {w:3, run:"Run 1", title:"Speed", zone:"vo2", work:"800, 600, 400, 200 ×2 rounds", warm:5, rest:"1 min", roundRest:"3 min"},
    {w:3, run:"Run 2", title:"Zone 2", zone:"hr", work:"30–35 min continuous"},
-   {w:3, run:"Run 3", title:"Split distance", zone:"aer", work:"3 × 2km", note:"1 min walk between.", opt:true},
-   {w:4, run:"Run 1", title:"Speed", zone:"vo2", work:"2×800, 2×600, 2×400", note:"Warm up 5 min. 1 min rest between reps."},
+   {w:3, run:"Run 3", title:"Split distance", zone:"aer", work:"3 × 2km", rest:"1 min", walk:true, opt:true},
+   {w:4, run:"Run 1", title:"Speed", zone:"vo2", work:"2×800, 2×600, 2×400", warm:5, rest:"1 min"},
    {w:4, run:"Run 2", title:"Zone 2", zone:"hr", work:"35–45 min continuous"},
    Object.assign({w:4}, RETEST_SESSION),
-   {w:5, run:"Run 1", title:"Speed", zone:"vo2", work:"1000, 800, 600, 400 ×2 rounds", note:"Warm up 5 min. 1 min between reps, 3 min between rounds."},
+   {w:5, run:"Run 1", title:"Speed", zone:"vo2", work:"1000, 800, 600, 400 ×2 rounds", warm:5, rest:"1 min", roundRest:"3 min"},
    {w:5, run:"Run 2", title:"Zone 2", zone:"hr", work:"40–50 min continuous"},
    {w:5, run:"Run 3", title:"Distance", zone:"aer", work:"6km steady", opt:true},
-   {w:6, run:"Run 1", title:"Intervals", zone:"vo2", work:"8 × 400m", note:"1 min rest between reps."},
+   {w:6, run:"Run 1", title:"Intervals", zone:"vo2", work:"8 × 400m", rest:"1 min"},
    {w:6, run:"Run 2", title:"Zone 2", zone:"hr", work:"30 min continuous"},
-   {w:6, run:"Run 3", title:"Distance", zone:"aer", work:"4 × 1km", note:"90 sec walk between."},
-   {w:7, run:"Run 1", title:"Speed", zone:"vo2", work:"2×1000, 2×800, 2×600, 2×400", strides:3, note:"1 min rest between reps."},
+   {w:6, run:"Run 3", title:"Distance", zone:"aer", work:"4 × 1km", rest:"90 sec", walk:true},
+   {w:7, run:"Run 1", title:"Speed", zone:"vo2", work:"2×1000, 2×800, 2×600, 2×400", strides:3, rest:"1 min"},
    {w:7, run:"Run 2", title:"Threshold", zone:"lt", work:"30–40 min continuous"},
-   {w:8, run:"Run 1", title:"Speed", zone:"vo2", work:"1200, 800, 400 ×2 rounds", strides:3, note:"90 sec between reps, 3 min between rounds."},
+   {w:8, run:"Run 1", title:"Speed", zone:"vo2", work:"1200, 800, 400 ×2 rounds", strides:3, rest:"90 sec", roundRest:"3 min"},
    {w:8, run:"Run 2", title:"Threshold", zone:"lt", work:"35–40 min continuous"},
    {w:8, run:"Run 3", title:"Distance", zone:"aer", work:"8km steady", opt:true},
-   {w:9, run:"Run 1", title:"Speed", zone:"vo2", work:"2×1200, 2×1000, 2×800", strides:3, note:"1 min rest between reps."},
+   {w:9, run:"Run 1", title:"Speed", zone:"vo2", work:"2×1200, 2×1000, 2×800", strides:3, rest:"1 min"},
    {w:9, run:"Run 2", title:"Threshold", zone:"lt", work:"40–45 min continuous"},
    {w:9, run:"Run 3", title:"Distance", zone:"aer", work:"10km steady", opt:true},
-   {w:10, run:"Run 1", title:"Speed", zone:"vo2", work:"1500, 1000, 800, 400 ×2 rounds", strides:2, note:"1 min between reps, 3 min between rounds."},
+   {w:10, run:"Run 1", title:"Speed", zone:"vo2", work:"1500, 1000, 800, 400 ×2 rounds", strides:2, rest:"1 min", roundRest:"3 min"},
    {w:10, run:"Run 2", title:"Threshold", zone:"lt", work:"45–50 min continuous", note:TWO_RUN_NOTE},
-   {w:11, run:"Run 1", title:"Speed", zone:"vo2", work:"2×1500, 2×1000, 2×800, 2×400", strides:3, note:"1 min rest between reps."},
+   {w:11, run:"Run 1", title:"Speed", zone:"vo2", work:"2×1500, 2×1000, 2×800, 2×400", strides:3, rest:"1 min"},
    {w:11, run:"Run 2", title:"Threshold", zone:"lt", work:"50–60 min continuous"},
-   {w:12, run:"Run 1", title:"Race pace", zone:"lt", work:"8 × 1km", strides:2, note:RACE_PACE_NOTE},
+   {w:12, run:"Run 1", title:"Race pace", zone:"lt", work:"8 × 1km", strides:2, rest:"1 min", note:RACE_PACE_NOTE},
    {w:12, run:"Run 2", title:"Threshold", zone:"lt", work:"60 min continuous"},
-   {w:13, run:"Run 1", title:"Race pace", zone:"lt", work:"8 × 1200m", strides:2, note:RACE_PACE_NOTE},
+   {w:13, run:"Run 1", title:"Race pace", zone:"lt", work:"8 × 1200m", strides:2, rest:"1 min", note:RACE_PACE_NOTE},
    {w:13, run:"Run 2", title:"Threshold", zone:"lt", work:"60 min continuous"},
-   {w:14, run:"Run 1", title:"Steady intervals", zone:"aer", work:"8 × 400m", strides:2, note:"90 sec rest between reps."},
+   {w:14, run:"Run 1", title:"Steady intervals", zone:"aer", work:"8 × 400m", strides:2, rest:"90 sec"},
    {w:14, run:"Run 2", title:"Recovery", zone:"hr", work:"20–30 min continuous"}
   ]
  },
@@ -64,37 +66,37 @@ const PROGRAMS = {
   phases:{0:"Pre-program",1:"Base",2:"Base",3:"Base",4:"Base",5:"Base",6:"Deload",7:"Build",8:"Build",9:"Build",10:"Build",11:"Race specific",12:"Race week"},
   sessions:[
    TEST_SESSION,
-   {w:1, run:"Run 1", title:"Speed", zone:"vo2", work:"8 × 400m", note:"Warm up 5 min. 90 sec rest between reps."},
+   {w:1, run:"Run 1", title:"Speed", zone:"vo2", work:"8 × 400m", warm:5, rest:"90 sec"},
    {w:1, run:"Run 2", title:"Zone 2", zone:"hr", work:"30 min continuous"},
    {w:1, run:"Run 3", title:"Distance", zone:"aer", work:"4km steady", opt:true},
-   {w:2, run:"Run 1", title:"Speed", zone:"vo2", work:"800, 600, 400, 200 ×2 rounds", note:"Warm up 5 min. 1 min between reps, 3 min between rounds."},
+   {w:2, run:"Run 1", title:"Speed", zone:"vo2", work:"800, 600, 400, 200 ×2 rounds", warm:5, rest:"1 min", roundRest:"3 min"},
    {w:2, run:"Run 2", title:"Zone 2", zone:"hr", work:"30–40 min continuous"},
    {w:2, run:"Run 3", title:"Steady", zone:"aer", work:"6km steady", opt:true},
-   {w:3, run:"Run 1", title:"Speed", zone:"vo2", work:"2×800, 2×600, 2×400", note:"Warm up 5 min. 1 min rest between reps."},
+   {w:3, run:"Run 1", title:"Speed", zone:"vo2", work:"2×800, 2×600, 2×400", warm:5, rest:"1 min"},
    {w:3, run:"Run 2", title:"Zone 2", zone:"hr", work:"40–50 min continuous"},
    {w:3, run:"Run 3", title:"Distance", zone:"aer", work:"5km steady", opt:true},
-   {w:4, run:"Run 1", title:"Speed", zone:"vo2", work:"1000, 800, 600, 400 ×2 rounds", note:"Warm up 5 min. 1 min between reps, 3 min between rounds."},
+   {w:4, run:"Run 1", title:"Speed", zone:"vo2", work:"1000, 800, 600, 400 ×2 rounds", warm:5, rest:"1 min", roundRest:"3 min"},
    {w:4, run:"Run 2", title:"Zone 2", zone:"hr", work:"50–60 min continuous"},
    Object.assign({w:4}, RETEST_SESSION),
-   {w:5, run:"Run 1", title:"Speed", zone:"vo2", work:"2×1000, 2×800, 2×600, 2×400", strides:3, note:"1 min rest between reps. Run these 10 sec under 5km pace (8/10 effort)."},
+   {w:5, run:"Run 1", title:"Speed", zone:"vo2", work:"2×1000, 2×800, 2×600, 2×400", strides:3, rest:"1 min", note:"Run these 10 sec under 5km pace (8/10 effort)."},
    {w:5, run:"Run 2", title:"Threshold", zone:"lt", work:"30–40 min continuous"},
    {w:5, run:"Run 3", title:"Steady", zone:"aer", work:"6km steady", opt:true},
-   {w:6, run:"Run 1", title:"Intervals", zone:"vo2", work:"8 × 400m", note:"1 min rest between reps."},
+   {w:6, run:"Run 1", title:"Intervals", zone:"vo2", work:"8 × 400m", rest:"1 min"},
    {w:6, run:"Run 2", title:"Zone 2", zone:"hr", work:"30 min continuous"},
-   {w:6, run:"Run 3", title:"Distance", zone:"aer", work:"4 × 1km", note:"90 sec walk between."},
-   {w:7, run:"Run 1", title:"Speed", zone:"vo2", work:"1200, 800, 400 ×2 rounds", strides:3, note:"90 sec between reps, 3 min between rounds."},
+   {w:6, run:"Run 3", title:"Distance", zone:"aer", work:"4 × 1km", rest:"90 sec", walk:true},
+   {w:7, run:"Run 1", title:"Speed", zone:"vo2", work:"1200, 800, 400 ×2 rounds", strides:3, rest:"90 sec", roundRest:"3 min"},
    {w:7, run:"Run 2", title:"Threshold", zone:"lt", work:"40–50 min continuous"},
    {w:7, run:"Run 3", title:"Distance", zone:"aer", work:"8km steady", opt:true},
-   {w:8, run:"Run 1", title:"Speed", zone:"vo2", work:"2×1200, 2×1000, 2×800", strides:3, note:"1 min rest between reps."},
+   {w:8, run:"Run 1", title:"Speed", zone:"vo2", work:"2×1200, 2×1000, 2×800", strides:3, rest:"1 min"},
    {w:8, run:"Run 2", title:"Threshold", zone:"lt", work:"50–60 min continuous"},
    {w:8, run:"Run 3", title:"Distance", zone:"aer", work:"10km steady", opt:true},
-   {w:9, run:"Run 1", title:"Speed", zone:"vo2", work:"1500, 1000, 800, 400 ×2 rounds", strides:2, note:"1 min between reps, 3 min between rounds."},
+   {w:9, run:"Run 1", title:"Speed", zone:"vo2", work:"1500, 1000, 800, 400 ×2 rounds", strides:2, rest:"1 min", roundRest:"3 min"},
    {w:9, run:"Run 2", title:"Threshold", zone:"lt", work:"50–60 min continuous", note:TWO_RUN_NOTE},
-   {w:10, run:"Run 1", title:"Speed", zone:"vo2", work:"2×1500, 2×1000, 2×800, 2×400", strides:3, note:"1 min rest between reps."},
+   {w:10, run:"Run 1", title:"Speed", zone:"vo2", work:"2×1500, 2×1000, 2×800, 2×400", strides:3, rest:"1 min"},
    {w:10, run:"Run 2", title:"Threshold", zone:"lt", work:"60–70 min continuous"},
-   {w:11, run:"Run 1", title:"Race pace", zone:"lt", work:"8 × 1km", strides:2, note:RACE_PACE_NOTE},
+   {w:11, run:"Run 1", title:"Race pace", zone:"lt", work:"8 × 1km", strides:2, rest:"1 min", note:RACE_PACE_NOTE},
    {w:11, run:"Run 2", title:"Threshold", zone:"lt", work:"60 min continuous"},
-   {w:12, run:"Run 1", title:"Steady intervals", zone:"aer", work:"8 × 400m", strides:2, note:"90 sec rest between reps."},
+   {w:12, run:"Run 1", title:"Steady intervals", zone:"aer", work:"8 × 400m", strides:2, rest:"90 sec"},
    {w:12, run:"Run 2", title:"Recovery", zone:"hr", work:"20–30 min continuous"}
   ]
  },
@@ -103,26 +105,26 @@ const PROGRAMS = {
   phases:{0:"Pre-program",1:"Base",2:"Base",3:"Base",4:"Build",5:"Build",6:"Build",7:"Race specific",8:"Race week"},
   sessions:[
    TEST_SESSION,
-   {w:1, run:"Run 1", title:"Speed", zone:"vo2", work:"800, 600, 400, 200 ×2 rounds", note:"Warm up 5 min. 1 min between reps, 3 min between rounds."},
+   {w:1, run:"Run 1", title:"Speed", zone:"vo2", work:"800, 600, 400, 200 ×2 rounds", warm:5, rest:"1 min", roundRest:"3 min"},
    {w:1, run:"Run 2", title:"Zone 2", zone:"hr", work:"30–40 min continuous"},
    {w:1, run:"Run 3", title:"Steady", zone:"aer", work:"4km steady", opt:true},
-   {w:2, run:"Run 1", title:"Speed", zone:"vo2", work:"2×800, 2×600, 2×400", note:"Warm up 5 min. 1 min rest between reps."},
+   {w:2, run:"Run 1", title:"Speed", zone:"vo2", work:"2×800, 2×600, 2×400", warm:5, rest:"1 min"},
    {w:2, run:"Run 2", title:"Zone 2", zone:"hr", work:"40–50 min continuous"},
    {w:2, run:"Run 3", title:"Distance", zone:"aer", work:"5km steady", opt:true},
-   {w:3, run:"Run 1", title:"Speed", zone:"vo2", work:"1000, 800, 600, 400 ×2 rounds", note:"Warm up 5 min. 1 min between reps, 3 min between rounds."},
+   {w:3, run:"Run 1", title:"Speed", zone:"vo2", work:"1000, 800, 600, 400 ×2 rounds", warm:5, rest:"1 min", roundRest:"3 min"},
    {w:3, run:"Run 2", title:"Zone 2", zone:"hr", work:"50–60 min continuous"},
    {w:3, run:"Run 3", title:"Distance", zone:"aer", work:"6km steady", opt:true},
-   {w:4, run:"Run 1", title:"Speed", zone:"vo2", work:"2×1000, 2×800, 2×600, 2×400", strides:3, note:"1 min rest between reps. Run these 10 sec under 5km pace (8/10 effort)."},
+   {w:4, run:"Run 1", title:"Speed", zone:"vo2", work:"2×1000, 2×800, 2×600, 2×400", strides:3, rest:"1 min", note:"Run these 10 sec under 5km pace (8/10 effort)."},
    {w:4, run:"Run 2", title:"Threshold", zone:"lt", work:"30–40 min continuous"},
    {w:4, run:"Run 3", title:"Steady", zone:"aer", work:"8km steady", opt:true},
-   {w:5, run:"Run 1", title:"Speed", zone:"vo2", work:"1200, 800, 400 ×2 rounds", strides:3, note:"90 sec between reps, 3 min between rounds."},
+   {w:5, run:"Run 1", title:"Speed", zone:"vo2", work:"1200, 800, 400 ×2 rounds", strides:3, rest:"90 sec", roundRest:"3 min"},
    {w:5, run:"Run 2", title:"Threshold", zone:"lt", work:"30–40 min continuous"},
    Object.assign({w:5}, RETEST_SESSION),
-   {w:6, run:"Run 1", title:"Speed", zone:"vo2", work:"2×1200, 2×1000, 2×800", strides:3, note:"1 min rest between reps."},
+   {w:6, run:"Run 1", title:"Speed", zone:"vo2", work:"2×1200, 2×1000, 2×800", strides:3, rest:"1 min"},
    {w:6, run:"Run 2", title:"Threshold", zone:"lt", work:"40–50 min continuous", note:TWO_RUN_NOTE},
-   {w:7, run:"Run 1", title:"Race pace", zone:"lt", work:"8 × 1km", strides:2, note:RACE_PACE_NOTE},
+   {w:7, run:"Run 1", title:"Race pace", zone:"lt", work:"8 × 1km", strides:2, rest:"1 min", note:RACE_PACE_NOTE},
    {w:7, run:"Run 2", title:"Threshold", zone:"lt", work:"50–60 min continuous"},
-   {w:8, run:"Run 1", title:"Steady intervals", zone:"aer", work:"8 × 400m", strides:2, note:"90 sec rest between reps."},
+   {w:8, run:"Run 1", title:"Steady intervals", zone:"aer", work:"8 × 400m", strides:2, rest:"90 sec"},
    {w:8, run:"Run 2", title:"Recovery", zone:"hr", work:"20–30 min continuous"}
   ]
  }
@@ -196,7 +198,7 @@ const km2 = v => (Math.round(Number(v)*100)/100).toFixed(2);
 const KEY="hyroxRunProgram.v1";
 function load(){ try{ return JSON.parse(localStorage.getItem(KEY))||{}; }catch(e){ return {}; } }
 function save(s){ try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} }
-let state = Object.assign({name:"",age:"",maf:"0",sent:"",email:"",coach:"",test:"",retest:"",prog:"14",ticks:{},km:{},days:[],start:"",store:{}}, load());
+let state = Object.assign({name:"",age:"",maf:"0",sent:"",email:"",coach:"",test:"",retest:"",restHr:"",peakHr:"",prog:"14",ticks:{},km:{},days:[],start:"",store:{}}, load());
 if(!PROGRAMS[state.prog]) state.prog = "14";
 if(!state.store) state.store = {};
 PROG = PROGRAMS[state.prog]; PROGRAM = PROG.sessions; PHASES = PROG.phases;
@@ -224,6 +226,62 @@ function renderProgPick(){
   if($("retestLbl")) $("retestLbl").textContent = `Week ${PROG.retest} retest (metres)`;
   if($("retest")) $("retest").placeholder = `After Week ${PROG.retest}`;
 }
+/* ============================ HEART RATE RECOVERY (optional) ============================
+   Go HR = resting + 70% of (peak - resting). On speed runs the athlete rests at
+   least HR_FLOOR sec, starts the next rep once heart rate is at or below the go HR,
+   and starts at the cap regardless. Nothing shows unless both numbers are valid.
+   e.g. resting 60, peak 190 -> 60 + 0.7 * 130 = 151 bpm
+*/
+const HR_PCT = 0.70, HR_FLOOR = 60;
+function hrInputs(){
+  const r = Number(state.restHr), p = Number(state.peakHr);
+  const hasR = state.restHr !== "", hasP = state.peakHr !== "";
+  const okR = hasR && Number.isFinite(r) && r >= 30 && r <= 100;
+  const okP = hasP && Number.isFinite(p) && p >= 120 && p <= 220;
+  const okGap = okR && okP && p - r >= 40;
+  return {r, p, hasR, hasP, okR, okP, okGap};
+}
+function goNumber(){
+  const x = hrInputs();
+  return x.okGap ? Math.round(x.r + HR_PCT * (x.p - x.r)) : null;
+}
+// Longest rest allowed on a speed session: the written rest + 30 sec.
+// Written as 60 or 60-90 sec -> 90. Written as 90 sec -> 120. Other sessions stay timed (null).
+function restCap(s){
+  if(s.zone !== "vo2" || s.title !== "Speed" || !s.rest) return null;
+  return s.rest === "90 sec" ? 120 : 90;
+}
+// Warm-up, rest and note for a session. The Rest text is the timed rest from the program,
+// or the heart rate version when the athlete has a go HR and the session is a speed run.
+function sessionParts(s, sp){
+  const cap = restCap(s), go = cap ? goNumber() : null;
+  let warm = "";
+  if(s.strides) warm = `5 min + ${s.strides} \u00d7 200m strides${sp ? " at " + pace(sp.vo2).main + " /km" : ""}`;
+  else if(s.warm) warm = `${s.warm} min`;
+  const bits = [];
+  if(s.rest) bits.push(go ? `${HR_FLOOR}\u2013${cap} sec between reps, start once you\u2019re at or below your go HR`
+                          : `${s.rest}${s.walk ? " walk" : ""} between reps`);
+  const round = s.roundRest ? `${s.roundRest} rest between rounds` : "";
+  return {warm, rest: bits.join(""), round, note: s.note || "", go};
+}
+// The same thing as one line of text, for the PDF and calendar.
+function sessionFlat(p){
+  return [p.warm && `Warm-up: ${p.warm}.`, p.rest && `Rest: ${p.go ? p.rest.replace("your go HR", p.go + " bpm") : p.rest}.`, p.round && `Rounds: ${p.round}.`, p.note].filter(Boolean).join(" ");
+}
+function renderHr(){
+  const x = hrInputs(), go = goNumber();
+  $("restHrErr").textContent = x.hasR && !x.okR ? "Enter a resting heart rate between 30 and 100." : "";
+  $("peakHrErr").textContent = x.hasP && !x.okP ? "Enter a peak heart rate between 120 and 220."
+    : (x.okR && x.okP && !x.okGap ? "Check these numbers. Your peak should be well above your resting." : "");
+  $("hrCur").textContent = go ? `Go at ${go} bpm or below on speed runs` : "Not set. Use your heart rate to time the rest on speed runs.";
+  $("hrOut").innerHTML = go
+    ? `<div class="hrk">How it\u2019s worked out</div>
+       <div class="hrw">${x.r} + 70% of (${x.p} \u2212 ${x.r}) = ${go}</div>
+       <p>Resting, plus 70% of the gap between resting and peak.</p>
+       <p><b>On speed runs:</b> rest at least ${HR_FLOOR} sec, then start your next rep when you drop to ${go} or below. At the max rest shown on the session, go regardless. Hit the max twice in a row? Slow the pace or call it a day.</p>`
+    : `<p class="hrempty">${x.hasR || x.hasP ? "Add both numbers to see your go HR." : "Leave these blank to keep timed rests."}</p>`;
+}
+
 // Existing athletes (anyone who already had a test entered before the lock existed) stay unlocked.
 if(state.unlocked === undefined) state.unlocked = !!state.test;
 
@@ -245,6 +303,9 @@ function applyLock(){
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 
+// Ticked sessions show as one short line so the next run is easy to reach.
+// Ids in here are ticked sessions the athlete has opened back up (this visit only).
+const openDone = new Set();
 function render(){
   const t = parseFloat(state.test), r = parseFloat(state.retest);
   const hasT = valid(t), hasR = valid(r);
@@ -270,7 +331,9 @@ function render(){
     };
     return `<div class="lane ${z}"><div class="z">${ZONES[z].name}<small>${ZONES[z].desc}</small></div>
       ${cell(s1,"Enter test")}${cell(hasR?s2:null, hasT?"After retest":"Enter test")}</div>`;
-  }).join("");
+  }).join("") +
+    (goNumber() ? `<div class="lane go"><div class="z">Go HR<small>Speed run rests</small></div>
+      <div class="p span">${goNumber()} bpm<span>All speed runs \u00b7 start your next rep at or below ${goNumber()}</span></div></div>` : "");
 
   // program
   let html = "", cur = -1, total = 0, done = 0;
@@ -294,16 +357,18 @@ function render(){
       if(sp){ const p = pace(sp[s.zone]); paceHtml += `<b>${p.main} /km</b><span>${p.fast}–${p.slow}</span>`; }
       else paceHtml += `<span>Enter test</span>`;
     }
-    let note = s.note||"";
-    if(s.strides){
-      const sv = sp ? " at "+pace(sp.vo2).main+" /km" : "";
-      note = `Warm up 5 min + ${s.strides} × 200m strides${sv}. ` + note;
-    }
-    html += `<div class="sess${s.opt?" opt":""}${s.test?" test":""}${checked?" done":""}">
+    const sx = sessionParts(s, sp);
+    if(sx.go) paceHtml += `<div class="gohr">Go \u2264 ${sx.go} bpm</div>`;
+    const spec = (sx.warm ? `<span class="k">Warm-up</span><span class="v">${esc(sx.warm)}</span>` : "") +
+                 (sx.rest ? `<span class="k">Rest</span><span class="v">${esc(sx.rest)}</span>` : "") +
+                 (sx.round ? `<span class="k">Rounds</span><span class="v">${esc(sx.round)}</span>` : "");
+    const min = checked && !openDone.has(id);
+    html += `<div class="sess${s.opt?" opt":""}${s.test?" test":""}${checked?" done":""}${min?" min":""}">
       <input type="checkbox" id="${id}" ${checked?"checked":""} aria-label="Mark ${esc(s.run)} week ${s.w} done">
       <label class="what" for="${id}"><div class="run">${esc(s.run)}</div><div class="title">${esc(s.title)}</div>
-        <div class="work">${esc(s.work)}</div>${note?`<div class="note">${esc(note)}</div>`:""}</label>
+        <div class="work">${esc(s.work)}</div>${spec?`<div class="spec">${spec}</div>`:""}${sx.note?`<div class="note">${esc(sx.note)}</div>`:""}</label>
       <div class="pace">${paceHtml}</div>
+      ${checked ? `<div class="mini">${logged ? `<span class="minikm">${km2(state.km[id].km)} km</span>` : ""}<button type="button" class="more" data-more="${id}" aria-expanded="${!min}">${min ? "Details" : "Hide"}</button></div>` : ""}
       ${s.test ? "" : `<details class="logbox" id="log${i}" ${logged?"open":""}>
         <summary>${logged ? `<span class="logged">✓ ${km2(state.km[id].km)} km logged</span>` : "Log run"}</summary>
         <div class="logrow">
@@ -319,22 +384,63 @@ function render(){
   $("progress").textContent = `${done} of ${total} sessions done`;
 }
 
+/* ============================ CONFIRM ============================
+   askConfirm("Clear ticks?", "Clear", "Cancel") resolves true or false. Escape or a tap outside cancels.
+*/
+let cfDone = null;
+function askConfirm(message, yes, no){
+  $("cfMsg").textContent = message;
+  $("cfYes").textContent = yes || "Yes";
+  $("cfNo").textContent = no || "Cancel";
+  $("cfModal").hidden = false;
+  $("cfNo").focus();
+  return new Promise(res => { cfDone = res; });
+}
+function cfClose(answer){ $("cfModal").hidden = true; const f = cfDone; cfDone = null; if(f) f(answer); }
+$("cfYes").addEventListener("click", ()=> cfClose(true));
+$("cfNo").addEventListener("click", ()=> cfClose(false));
+$("cfModal").addEventListener("click", e=>{ if(e.target === $("cfModal")) cfClose(false); });
+document.addEventListener("keydown", e=>{ if(e.key === "Escape" && !$("cfModal").hidden) cfClose(false); });
+
 /* ============================ EVENTS ============================ */
 ["name","age","email","test","retest"].forEach(k=>{
   $(k).value = state[k]||"";
   $(k).addEventListener("input", e=>{ state[k]=e.target.value.trim(); save(state); render(); if(typeof updateCalHints==="function") updateCalHints(); });
 });
+["restHr","peakHr"].forEach(k=>{
+  $(k).value = state[k]||"";
+  $(k).addEventListener("input", e=>{ state[k]=e.target.value.trim(); save(state); renderHr(); render(); });
+});
+$("hrDevices").addEventListener("click", e=>{
+  const d = e.target.dataset && e.target.dataset.dev; if(!d) return;
+  document.querySelectorAll("#hrDevices button").forEach(b=>{ const on = b.dataset.dev===d; b.classList.toggle("on", on); b.setAttribute("aria-pressed", on); });
+  document.querySelectorAll(".hrdev").forEach(p=>{ p.hidden = p.dataset.dev !== d; });
+});
 document.querySelectorAll('input[name="maf"]').forEach(r=>{
   r.checked = r.value === String(state.maf);
   r.addEventListener("change", ()=>{ state.maf = r.value; save(state); render(); setTimeout(()=>{ $("mafBox").open = false; }, 250); });
 });
-$("program").addEventListener("change", e=>{
+$("program").addEventListener("change", async e=>{
   if(e.target.type!=="checkbox") return;
+  if(!e.target.checked){
+    // unticking: keep it ticked until the athlete confirms, in case it was a slip
+    const box = e.target, s = PROGRAM[+box.id.slice(1)];
+    box.checked = true;
+    const what = !s ? "this session" : s.w === 0 ? "the 6-min test" : `Week ${s.w} ${s.run}`;
+    const kept = state.km[box.id] ? "\nYour logged distance stays saved." : "";
+    if(!(await askConfirm(`Untick ${what}?${kept}`, "Untick", "Keep it ticked"))) return;
+    box.checked = false;
+  }
   state.ticks[e.target.id] = e.target.checked; save(state);
-  e.target.closest(".sess").classList.toggle("done", e.target.checked);
-  const d = Object.values(state.ticks).filter(Boolean).length;
-  $("progress").textContent = `${d} of ${PROGRAM.length} sessions done`;
-  updateStrip(); queueSync();
+  openDone.delete(e.target.id);
+  render(); updateStrip(); queueSync();
+});
+$("program").addEventListener("click", e=>{
+  const b = e.target.closest("[data-more]"); if(!b) return;
+  const id = b.dataset.more;
+  if(openDone.has(id)) openDone.delete(id); else openDone.add(id);
+  render();
+  const again = document.querySelector(`[data-more="${id}"]`); if(again) again.focus();
 });
 $("coachPick").addEventListener("change", e=>{
   if(e.target.name !== "coach") return;
@@ -345,7 +451,13 @@ $("coachPick").addEventListener("click", e=>{
   state.coach = ""; save(state); renderCoaches(); queueSync();
 });
 
-$("reset").addEventListener("click", ()=>{ if(confirm(`Clear ticked sessions and logged distances for the ${PROG.label} program?`)){ state.ticks={}; state.km={}; save(state); render(); updateStrip(); queueSync(); } });
+$("reset").addEventListener("click", async ()=>{
+  const n = Object.values(state.ticks).filter(Boolean).length;
+  if(!n && !Object.keys(state.km).length) return;
+  if(await askConfirm(`Clear all ${n} ticks and every logged distance for the ${PROG.weeks}-week program?\nThis can\u2019t be undone.`, "Clear ticks", "Cancel")){
+    state.ticks={}; state.km={}; save(state); render(); updateStrip(); queueSync();
+  }
+});
 
 // logging a distance also ticks the session off
 $("program").addEventListener("change", e=>{
@@ -355,6 +467,7 @@ $("program").addEventListener("change", e=>{
   if(Number.isFinite(v) && v > 0){
     state.km[id] = {km: Math.round(v*100)/100, on: toISO(new Date())};
     state.ticks[id] = true;
+    openDone.add(id);   // keep it open so Share is right there after logging
   } else {
     delete state.km[id];
   }
@@ -363,23 +476,48 @@ $("program").addEventListener("change", e=>{
 
 /* ============================ PROGRESS ============================ */
 function mondayOf(d){ const x = new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate() - ((x.getDay()+6)%7)); return x; }
+// Which calendar week (Mon-Sun) the strip and the progress image show. 0 = this week, -1 = last week.
+let weekOffset = 0;
+const fmtDay = d => d.toLocaleDateString(undefined,{day:"numeric",month:"short"});
+function weekWindow(off){ const start = addDays(mondayOf(new Date()), off*7); return {start, end:addDays(start,7), last:addDays(start,6)}; }
+// The earliest week that has a logged distance, as an offset from this week.
+function minWeekOffset(){
+  const now = mondayOf(new Date()); let min = 0;
+  Object.values(state.km).forEach(e=>{
+    if(!e.on) return;
+    const d = Math.round((mondayOf(parseISO(e.on)) - now) / 6048e5);
+    if(d < min) min = d;
+  });
+  return min;
+}
+function weekName(off){ return off === 0 ? "This week" : off === -1 ? "Last week" : "Week of " + fmtDay(weekWindow(off).start); }
 function progressTotals(){
   const runs = Object.values(state.ticks).filter(Boolean).length;
   let total = 0, week = 0;
-  const wkStart = mondayOf(new Date());
-  Object.values(state.km).forEach(e=>{
-    const v = Number(e.km)||0; total += v;
-    if(e.on && parseISO(e.on) >= wkStart) week += v;
+  const w = weekWindow(weekOffset), list = [];
+  Object.values(state.km).forEach(e=>{ total += Number(e.km)||0; });
+  PROGRAM.forEach((s,i)=>{
+    const e = state.km["s"+i]; if(!e || !e.on) return;
+    const d = parseISO(e.on);
+    if(d >= w.start && d < w.end){ const v = Number(e.km)||0; week += v; list.push({i, s, km:v}); }
   });
-  return {runs, total, week, pct: Math.min(100, Math.round(runs/PROGRAM.length*100))};
+  return {runs, total, week, list, pct: Math.min(100, Math.round(runs/PROGRAM.length*100))};
 }
 function updateStrip(){
-  const p = progressTotals();
+  const min = minWeekOffset();
+  if(weekOffset < min) weekOffset = min;
+  const p = progressTotals(), w = weekWindow(weekOffset);
   $("stripNums").innerHTML =
     `<span class="n">${p.runs}<small>Runs</small></span>` +
     `<span class="n">${km2(p.total)}<small>Total km</small></span>` +
-    `<span class="n">${km2(p.week)}<small>This week</small></span>`;
+    `<span class="n">${km2(p.week)}<small>${weekName(weekOffset)}</small></span>`;
   $("stripFill").style.width = p.pct + "%";
+  $("wkLabel").innerHTML = `${weekName(weekOffset)}<small>${fmtDay(w.start)} \u2013 ${fmtDay(w.last)}</small>`;
+  $("wkPrev").disabled = weekOffset <= min;
+  $("wkNext").disabled = weekOffset >= 0;
+  $("wkRuns").innerHTML = p.list.length
+    ? p.list.map(r => `<div class="wkrun"><span><span class="wkw">${r.s.w===0?"Before you start":"Week "+r.s.w} \u00b7 ${esc(r.s.run)} \u00b7 ${esc(r.s.title)}</span>${esc(r.s.work)}</span><span class="wkkm">${km2(r.km)} km</span><button type="button" data-share="${r.i}" aria-label="Share this run">\u2b06 Share</button></div>`).join("")
+    : `<p class="wkempty">${weekOffset===0 ? "No distances logged yet this week." : "No distances logged that week."}</p>`;
 }
 /* ============================ SHARE IMAGE ============================ */
 let shIndex = 0, shMode = "session";
@@ -494,16 +632,17 @@ function drawProgress(canvas){
   ctx.fillStyle = accent; ctx.fillRect(right + 22, blockTop, BAR, 560);
 
   ctx.fillStyle = accent; ctx.font = `600 38px "Barlow", Arial, sans-serif`;
-  ctx.fillText(`WEEK ${cur.w} \u00b7 ${PHASES[cur.w].toUpperCase()}`, x, y); y += 40;
+  const wk = weekWindow(weekOffset), past = weekOffset < 0;
+  ctx.fillText(past ? `${fmtDay(wk.start)} \u2013 ${fmtDay(wk.last)}`.toUpperCase() : `WEEK ${cur.w} \u00b7 ${PHASES[cur.w].toUpperCase()}`, x, y); y += 40;
 
   // this week is the hero number
   ctx.fillStyle = fg; ctx.font = `800 210px "Barlow Condensed", "Arial Narrow", Arial, sans-serif`;
   ctx.fillText(km2(p.week), x, y + 150); y += 168;
   ctx.fillStyle = accent; ctx.font = `700 60px "Barlow Condensed", "Arial Narrow", Arial, sans-serif`;
-  ctx.fillText("KM THIS WEEK", x, y + 52); y += 116;
+  ctx.fillText(past ? (weekOffset === -1 ? "KM LAST WEEK" : "KM THAT WEEK") : "KM THIS WEEK", x, y + 52); y += 116;
 
   ctx.fillStyle = fg; ctx.font = `800 96px "Barlow Condensed", "Arial Narrow", Arial, sans-serif`;
-  ctx.fillText(`RUNS: ${p.runs}`, x, y + 20); y += 74;
+  ctx.fillText(past ? `RUNS: ${p.list.length}` : `RUNS: ${p.runs}`, x, y + 20); y += 74;
 
   // total sits underneath, smaller
   ctx.fillStyle = fg; ctx.globalAlpha = .85; ctx.font = `600 52px "Barlow Condensed", "Arial Narrow", Arial, sans-serif`;
@@ -548,6 +687,11 @@ $("shView").addEventListener("click", ()=>{
   shMode = shMode === "session" ? "progress" : "session";
   $("shView").textContent = shMode === "progress" ? "This session" : "My progress";
   drawCurrent();
+});
+$("wkPrev").addEventListener("click", ()=>{ weekOffset--; updateStrip(); });
+$("wkNext").addEventListener("click", ()=>{ if(weekOffset < 0) weekOffset++; updateStrip(); });
+$("wkRuns").addEventListener("click", e=>{
+  const b = e.target.closest("[data-share]"); if(b) openShare(+b.dataset.share);
 });
 $("shProg").addEventListener("click", async ()=>{
   try { await document.fonts.load('800 210px "Barlow Condensed"'); } catch(e){}
@@ -600,7 +744,7 @@ function buildPDF(){
   const doc = new jsPDF({unit:"mm", format:"a4"});
   const W = 210, H = 297, M = 14, CW = W - 2*M;
   const COL = {ink:[20,22,26], muted:[94,104,120], rule:[215,218,224], soft:[242,243,245],
-    brand:[228,183,0], hr:[46,139,87], aer:[31,138,138], lt:[168,133,10], vo2:[217,65,43]};
+    brand:[228,183,0], go:[138,79,168], hr:[46,139,87], aer:[31,138,138], lt:[168,133,10], vo2:[217,65,43]};
   const t = parseFloat(state.test), r = parseFloat(state.retest);
   const s1 = valid(t) ? speeds(t) : null, s2 = valid(r) ? speeds(r) : s1;
   const age = Number(state.age), hr = validAge(age) ? zone2(age, state.maf) : null;
@@ -652,6 +796,7 @@ function buildPDF(){
     const v = s => { if (!s) return ["Enter test in app",""]; const p = pace(s[z]); return [p.main + " /km", p.fast + "-" + p.slow + " /km"]; };
     zoneRow(z, ZONES[z].name, ZONES[z].desc, v(s1), valid(r) ? v(s2) : (s1 ? ["After retest", `uses Weeks 1-${PROG.retest} until then`] : v(null)));
   }
+  if (goNumber()) zoneRow("go", "Go HR", "Speed run rests", [goNumber() + " bpm", "All speed runs, start your next rep at or below " + goNumber()], null, true);
   y += 4;
 
   // Program
@@ -659,8 +804,7 @@ function buildPDF(){
   let cur = -1;
   PROGRAM.forEach((s, i) => {
     const sp = s.w <= PROG.retest ? s1 : s2;
-    let note = s.note || "";
-    if (s.strides) note = `Warm up 5 min + ${s.strides} x 200m strides${sp ? " at " + pace(sp.vo2).main + " /km" : ""}. ` + note;
+    const note = sessionFlat(sessionParts(s, sp));
     doc.setFontSize(8.5); const noteLines = note ? doc.splitTextToSize(pdfText(note), textW) : [];
     const hasRange = s.zone && s.zone !== "hr" && sp;
     const rowH = Math.max(10 + noteLines.length * 3.6, hasRange ? 12.5 : 10);
@@ -857,8 +1001,7 @@ function buildEvents(fromWeek, toWeek, includeTest){
     } else {
       title = `📋 ${s.title} – ${s.work}`;
     }
-    let note = s.note||"";
-    if(s.strides){ note = `Warm up 5 min + ${s.strides} × 200m strides${sp?" at "+pace(sp.vo2).main+" /km":""}. ` + note; }
+    const note = sessionFlat(sessionParts(s, sp));
     if(note) desc.push(note);
     desc.push(`Week ${s.w===0?"0 (before you start)":s.w}${s.w?" – "+PHASES[s.w]:""}`);
     desc.push("Prepared by @boomwilliams and @scotty_lev10 – open your program: " + APP_URL);
@@ -913,6 +1056,8 @@ $("days").addEventListener("change", e=>{
   state.days = e.target.checked ? [...state.days, i].slice(0,3) : state.days.filter(x=>x!==i);
   state.days.sort((a,b)=>a-b); save(state); renderDays(); updateSummaries();
 });
+$("calToggle").addEventListener("click", ()=>{ $("calBox").open = !$("calBox").open; });
+$("calBox").addEventListener("toggle", ()=>{ $("calToggle").setAttribute("aria-expanded", $("calBox").open); });
 $("startDate").addEventListener("change", e=>{ state.start = e.target.value; save(state); renderDays(); updateSummaries(); });
 $("cal1").addEventListener("click", ()=>{
   if(!calReady()) return;
@@ -932,16 +1077,17 @@ $("startDate").value = state.start;
 renderDays();
 renderCoaches();
 renderProgPick();
-$("progPick").addEventListener("click", e=>{
+$("progPick").addEventListener("click", async e=>{
   const k = e.target.dataset && e.target.dataset.prog;
   if(!k) return;
   if(k !== state.prog && (Object.keys(state.ticks).length || Object.keys(state.km).length)){
     const kept = state.store[k] && (Object.keys(state.store[k].ticks||{}).length || Object.keys(state.store[k].km||{}).length);
-    if(!confirm(`Switch to the ${PROGRAMS[k].label} program?\n\nYour ${PROG.label} ticks and distances are kept — switch back any time to see them.` + (kept ? `\n\nYou already have progress saved on the ${PROGRAMS[k].label} program; it will be restored.` : ""))) return;
+    if(!(await askConfirm(`Switch to the ${PROGRAMS[k].weeks}-week program?\nYour ${PROG.weeks}-week ticks and distances are kept. Switch back any time to see them.` + (kept ? `\nYou already have progress saved on the ${PROGRAMS[k].weeks}-week program. It will be restored.` : ""), "Switch", "Cancel"))) return;
   }
   setProgram(k);
 });
 
+renderHr();
 render();
 updateCalHints();
 updateSummaries();

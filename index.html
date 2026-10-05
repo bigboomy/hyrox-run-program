@@ -20,6 +20,7 @@
   --aer:#1F8A8A; --lt:#A8850A; --vo2:#D9412B; --done:#2E7D4F; --focus:#2F6FEB;
   --aer-bg:#E3F2F2; --lt-bg:#FBF1D2; --vo2-bg:#FBE4E0;
   --hr:#2E8B57; --hr-bg:#E2F3E8;
+  --go:#8A4FA8; --go-bg:#F1E6F6;
 }
 @media (prefers-color-scheme: dark){
   :root:not([data-theme="light"]){
@@ -28,6 +29,7 @@
     --aer:#4CC0C0; --lt:#F0B63C; --vo2:#FF6B55; --done:#5BC08A; --focus:#7AA7FF;
     --aer-bg:#16302F; --lt-bg:#33290F; --vo2-bg:#3A1F1B;
     --hr:#5BC08A; --hr-bg:#173323;
+    --go:#C99BE0; --go-bg:#2E1F38;
   }
 }
 :root[data-theme="dark"]{
@@ -36,6 +38,7 @@
   --aer:#4CC0C0; --lt:#F0B63C; --vo2:#FF6B55; --done:#5BC08A; --focus:#7AA7FF;
   --aer-bg:#16302F; --lt-bg:#33290F; --vo2-bg:#3A1F1B;
   --hr:#5BC08A; --hr-bg:#173323;
+  --go:#C99BE0; --go-bg:#2E1F38;
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -56,6 +59,12 @@ button,input{font:inherit;color:inherit}
 .inputs input{background:var(--soft);border:2px solid var(--rule);border-radius:8px;padding:10px 12px;font-size:1.05rem;width:100%}
 .inputs input:focus{border-color:var(--focus);outline:none}
 .inputs .big input{font-family:"Barlow Condensed",Arial,sans-serif;font-size:2rem;font-weight:700;padding:6px 12px}
+.row2{grid-column:1/-1;display:grid;grid-template-columns:1fr 1fr;gap:4px 12px;align-items:start}
+.row2.nameage{grid-template-columns:minmax(0,1fr) 4.6rem}
+.row2.nameage .err{grid-column:1/-1;min-height:0}
+.row2.nameage input{min-width:0}
+.row2 #age{text-align:center;padding-left:6px;padding-right:6px}
+.inputs .big input::placeholder{font-size:1.05rem;font-weight:500}
 .hint{font-size:.8rem;color:var(--muted)}
 .err{color:var(--vo2);font-size:.8rem;min-height:1em}
 
@@ -70,9 +79,9 @@ button,input{font:inherit;color:inherit}
 .lane .p span{display:block;font-family:"Barlow",Arial,sans-serif;font-size:.94rem;font-weight:500;color:var(--muted);margin-top:2px}
 .lane .p.na{font-size:1rem;color:var(--muted);font-weight:600}
 .lanehead{display:grid;grid-template-columns:120px 1fr 1fr;padding:0 14px 4px;font-size:.78rem;color:var(--muted)}
-.hr{--c:var(--hr);--cb:var(--hr-bg)} .lane .p.span{grid-column:2/4} .aer{--c:var(--aer);--cb:var(--aer-bg)} .lt{--c:var(--lt);--cb:var(--lt-bg)} .vo2{--c:var(--vo2);--cb:var(--vo2-bg)}
+.go{--c:var(--go);--cb:var(--go-bg)} .hr{--c:var(--hr);--cb:var(--hr-bg)} .lane .p.span{grid-column:2/4} .aer{--c:var(--aer);--cb:var(--aer-bg)} .lt{--c:var(--lt);--cb:var(--lt-bg)} .vo2{--c:var(--vo2);--cb:var(--vo2-bg)}
 
-.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:22px 0 8px}
+.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:14px 0 8px}
 .progress{font-size:.9rem;color:var(--muted)}
 .btn{background:var(--brand);color:var(--on-brand);border:0;border-radius:8px;padding:10px 16px;font-weight:600;cursor:pointer}
 .btn.ghost{background:transparent;color:var(--muted);border:1px solid var(--rule)}
@@ -97,6 +106,17 @@ button,input{font:inherit;color:inherit}
 .sess.opt .title::after{content:" (optional)";font-weight:400}
 .sess.test{background:var(--soft);border-radius:8px;padding:10px 8px;border-bottom:0;margin:4px 0}
 .sess.done .work,.sess.done .title{text-decoration:line-through;text-decoration-thickness:2px;opacity:.6}
+.sess.min{padding:5.5px 0;align-items:center}
+.sess.min.test{padding:5.5px 8px}
+.sess.min .title,.sess.min .spec,.sess.min .note,.sess.min .pace,.sess.min .logbox{display:none}
+.sess.min .what{display:flex;flex-wrap:wrap;gap:0 8px;align-items:baseline}
+.sess.min .work{font-size:1.05rem}
+.sess.min input[type=checkbox]{margin:0}
+.mini{display:flex;align-items:center;gap:10px;white-space:nowrap}
+.sess:not(.min) .mini{grid-column:1/-1;justify-self:end}
+.sess:not(.min) .minikm{display:none}
+.minikm{font-family:"Barlow Condensed",Arial,sans-serif;font-weight:700;font-size:1.05rem;color:var(--done);font-variant-numeric:tabular-nums}
+.more{background:transparent;border:1px solid var(--rule);border-radius:8px;color:var(--muted);font-size:.9rem;padding:3.5px 10px;cursor:pointer}
 .empty{padding:14px;border:2px dashed var(--rule);border-radius:10px;color:var(--muted);text-align:center}
 .send{display:block;border:1px solid var(--rule);border-radius:10px;padding:14px;margin:0 0 22px;background:var(--soft)}
 .send h3{margin:0 0 2px;font-size:1.3rem}
@@ -107,7 +127,10 @@ button,input{font:inherit;color:inherit}
 .status{font-size:.9rem;margin-left:8px}
 .status.ok{color:var(--done)} .status.bad{color:var(--vo2)}
 .btn:disabled{opacity:.5;cursor:not-allowed}
-.cal{display:block;border:1px solid var(--rule);border-radius:10px;padding:14px;margin:22px 0 0}
+.cal{display:block;border:1px solid var(--rule);border-radius:10px;padding:14px;margin:12px 0 0}
+.cal:not([open]){display:none}
+.actions{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:8px;margin:0}
+.actions .btn{padding:11px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .cal h3{margin:0 0 2px;font-size:1.3rem}
 .cal p{margin:0 0 10px;font-size:.85rem;color:var(--muted)}
 .days{display:flex;flex-wrap:wrap;gap:6px;margin:4px 0 12px;border:0;padding:0}
@@ -143,12 +166,34 @@ button,input{font:inherit;color:inherit}
 .maf input{width:18px;height:18px;margin:2px 0 0;padding:0;flex:none;accent-color:var(--hr)}
 .maf label:has(input:checked){border-color:var(--hr)}
 .maf b{font-weight:600;color:var(--hr);margin-left:auto;padding-left:8px;white-space:nowrap}
+.hrintro{font-size:.85rem;color:var(--muted);margin:0 0 10px}
+.hrbox{display:block;border:1px solid var(--rule);border-radius:10px;padding:14px;margin:14px 0 26px}
+.inputs.hrgrid{margin:0;align-items:end}
+.hrhelp{margin:6px 0 2px;font-size:.9rem}
+.hrhelp>summary{cursor:pointer;color:var(--lt);font-weight:600;list-style:none;padding:4px 0}
+.hrhelp>summary::-webkit-details-marker{display:none}
+.hrhelp>summary::after{content:" \25b8"}
+.hrhelp[open]>summary::after{content:" \25be"}
+.hrhelp p{margin:6px 0}
+.hrdevs{display:flex;flex-wrap:wrap;gap:6px;margin:8px 0}
+.hrdevs button{padding:6px 14px;border:2px solid var(--rule);border-radius:999px;background:var(--bg);font-weight:600;cursor:pointer}
+.hrdevs button.on{border-color:var(--brand);background:var(--brand);color:var(--on-brand)}
+.hrtips{margin:8px 0 4px 18px;padding:0;color:var(--muted);font-size:.85rem}
+.hrtips li{margin-bottom:4px}
+.hrout{margin-top:10px;border-top:1px dashed var(--rule);padding-top:10px}
+.hrout p{margin:6px 0 0;font-size:.9rem}
+.hrout .hrempty{color:var(--muted);margin:0}
+.hrk{font-size:.72rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.hrw{font-family:"Barlow Condensed",Arial,sans-serif;font-weight:700;font-size:1.15rem;font-variant-numeric:tabular-nums;margin-top:2px}
+.spec{display:grid;grid-template-columns:auto minmax(0,1fr);gap:1px 10px;margin-top:3px;font-size:.88rem;align-items:baseline}
+.spec .k{font-size:.7rem;font-weight:600;letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.sess .pace .gohr{font-size:.94rem;font-weight:600;color:var(--go);margin-top:2px}
 .mafnote{grid-column:1/-1;font-size:.85rem;color:var(--muted);margin:0}
 /* locked state: structure stays readable, paces are blurred until unlocked */
 .locked .lane.vo2 .p,
 .locked .sess .pace b,
 .locked .sess .pace span{filter:blur(7px);user-select:none;pointer-events:none}
-.locked .cal,.locked #pdf,.locked .sh{display:none!important}
+.locked .cal,.locked #calToggle,.locked #pdf,.locked .sh{display:none!important}
 .lockmsg{border:2px solid var(--brand);background:var(--soft);border-radius:10px;padding:12px 14px;margin:0 0 14px;font-size:.9rem}
 .lockmsg b{display:block;font-family:"Barlow Condensed",Arial,sans-serif;font-size:1.25rem;margin-bottom:2px}
 body:not(.locked) .lockmsg{display:none}
@@ -185,6 +230,17 @@ body:not(.locked) .lockmsg{display:none}
 .strip .track{height:8px;border-radius:5px;background:var(--rule);margin-top:10px;overflow:hidden}
 .strip .fill{height:100%;background:var(--brand);border-radius:5px}
 .strip .shp{float:right;background:transparent;border:1px solid var(--rule);border-radius:8px;color:var(--muted);font-size:1.125rem;padding:6px 14px;cursor:pointer}
+.wknav{display:flex;align-items:center;gap:10px;margin-top:12px}
+.wknav button{width:40px;height:36px;border:1px solid var(--rule);border-radius:8px;background:var(--bg);font-size:1.4rem;line-height:1;cursor:pointer}
+.wknav button:disabled{opacity:.3;cursor:default}
+.wknav span{flex:1;text-align:center;font-weight:600}
+.wknav span small{display:block;font-weight:500;font-size:.78rem;color:var(--muted)}
+.wkruns{margin-top:8px;display:grid;gap:6px}
+.wkrun{display:grid;grid-template-columns:minmax(0,1fr) auto auto;gap:4px 10px;align-items:center;padding:8px 10px;border-radius:8px;background:var(--bg);border:1px solid var(--rule);font-size:.9rem}
+.wkrun .wkw{font-size:.78rem;color:var(--muted);display:block}
+.wkrun .wkkm{font-family:"Barlow Condensed",Arial,sans-serif;font-weight:700;font-size:1.2rem;font-variant-numeric:tabular-nums;white-space:nowrap}
+.wkrun button{background:transparent;border:1px solid var(--rule);border-radius:8px;color:var(--muted);padding:4px 10px;cursor:pointer}
+.wkempty{font-size:.85rem;color:var(--muted);margin:0;text-align:center}
 body.locked .strip{display:none}
 .sh{display:none}
 .sh.sh-below{display:block;margin:6px 0 0;grid-column:1/-1;justify-self:end;background:transparent;border:1px solid var(--rule);border-radius:8px;color:var(--muted);font-size:1.125rem;padding:6px 14px;cursor:pointer}
@@ -194,6 +250,7 @@ body.locked .strip{display:none}
 .shcard{background:var(--bg);border-radius:14px;padding:16px;max-width:420px;width:100%;max-height:90vh;overflow:auto}
 .shcard h3{margin:0 0 4px;font-size:1.3rem}
 .shcard p{margin:0 0 10px;font-size:.85rem;color:var(--muted)}
+.shcard .cfmsg{font-size:1rem;color:var(--ink);margin:0 0 14px;white-space:pre-line}
 .shprev{background:repeating-conic-gradient(var(--soft) 0% 25%, var(--rule) 0% 50%) 50%/16px 16px;border-radius:10px;padding:8px;margin-bottom:10px}
 .shprev canvas{width:100%;height:auto;display:block}
 .shrow{display:flex;gap:8px;flex-wrap:wrap}
@@ -229,6 +286,7 @@ footer .small{margin:0}
   .week{margin-top:12px}
   .week h2{font-size:15pt}
   .sess{padding:5px 0;break-inside:avoid}
+  .mini{display:none}
   .sess .work{font-size:12pt}
   .sess .pace b{font-size:12pt}
   .pill,.lane::before{-webkit-print-color-adjust:exact;print-color-adjust:exact}
@@ -254,13 +312,15 @@ footer .small{margin:0}
   </div>
 
   <section class="inputs" aria-label="Your test results">
-    <label>Athlete name
-      <input id="name" type="text" autocomplete="name" placeholder="Your name">
-    </label>
-    <label>Age
-      <input id="age" type="number" inputmode="numeric" min="12" max="90" placeholder="e.g. 40">
+    <div class="row2 nameage">
+      <label>Athlete name
+        <input id="name" type="text" autocomplete="name" placeholder="Your name">
+      </label>
+      <label>Age
+        <input id="age" type="number" inputmode="numeric" min="12" max="90" placeholder="40">
+      </label>
       <span class="err" id="ageErr"></span>
-    </label>
+    </div>
     <details class="fold mafbox" id="mafBox">
     <summary><span class="lab">Training history:</span> <span class="cur" id="mafCur"></span><span class="chg">Change ▾</span></summary>
     <fieldset class="maf" id="maf">
@@ -272,14 +332,16 @@ footer .small{margin:0}
     </fieldset>
     </details>
     <p class="mafnote" id="mafNote" hidden>Age 16 and under: your Zone 2 ceiling is set at 165 bpm.</p>
-    <label class="big">6-min test (metres)
-      <input id="test" type="number" inputmode="numeric" min="600" max="2600" placeholder="e.g. 1490">
-      <span class="err" id="testErr"></span>
-    </label>
-    <label class="big"><span id="retestLbl">Week 4 retest (metres)</span>
-      <input id="retest" type="number" inputmode="numeric" min="600" max="2600" placeholder="After Week 4">
-      <span class="err" id="retestErr"></span>
-    </label>
+    <div class="row2">
+      <label class="big">6-min test (metres)
+        <input id="test" type="number" inputmode="numeric" min="600" max="2600" placeholder="e.g. 1490">
+        <span class="err" id="testErr"></span>
+      </label>
+      <label class="big"><span id="retestLbl">Week 4 retest (metres)</span>
+        <input id="retest" type="number" inputmode="numeric" min="600" max="2600" placeholder="After Week 4">
+        <span class="err" id="retestErr"></span>
+      </label>
+    </div>
   </section>
 
   <details class="fold send" id="sendBox">
@@ -309,13 +371,67 @@ footer .small{margin:0}
     <div class="lanehead"><span>Zone</span><span id="laneW1">Weeks 1–4</span><span id="laneW2">Weeks 5–14</span></div>
     <div class="lanes" id="lanes"></div>
     <p class="hint">Target pace per km, with the fast–slow range (±5% of speed) underneath. Zone 2 runs use heart rate (Maffetone MAF): 180 − age, adjusted for your training history. Stay at or below the top number.</p>
+    <details class="fold hrbox" id="hrBox">
+      <summary><span class="sum-t">❤️ Heart rate recovery (optional)</span><span class="sum-s" id="hrCur"></span></summary>
+      <p class="hrintro">Enter both numbers to get your go HR. Leave blank to use timed rests. These numbers stay on this device.</p>
+      <div class="inputs hrgrid">
+        <label>Resting heart rate (bpm)
+          <input id="restHr" type="number" inputmode="numeric" min="30" max="100" placeholder="e.g. 60">
+          <span class="err" id="restHrErr"></span>
+        </label>
+        <label>Peak heart rate in your 6-min test (bpm)
+          <input id="peakHr" type="number" inputmode="numeric" min="120" max="220" placeholder="e.g. 190">
+          <span class="err" id="peakHrErr"></span>
+        </label>
+      </div>
+      <details class="hrhelp" id="hrHelp">
+        <summary>Where do I find these?</summary>
+        <p>You need two numbers. Both are already in your watch app.</p>
+        <div class="hrdevs" id="hrDevices" role="group" aria-label="Your device">
+          <button type="button" class="on" data-dev="apple" aria-pressed="true">Apple Watch</button>
+          <button type="button" data-dev="garmin" aria-pressed="false">Garmin</button>
+          <button type="button" data-dev="strava" aria-pressed="false">Strava</button>
+        </div>
+        <div class="hrdev" data-dev="apple">
+          <p><b>Peak heart rate:</b> on your iPhone open <b>Fitness</b>, tap your 6-min test run, then tap <b>Heart Rate</b>. Use the top number of the range shown.</p>
+          <p><b>Resting heart rate:</b> on your iPhone open <b>Health</b>, then <b>Browse → Heart → Resting Heart Rate</b>. Use your average for the last week.</p>
+        </div>
+        <div class="hrdev" data-dev="garmin" hidden>
+          <p><b>Peak heart rate:</b> in <b>Garmin Connect</b>, open your 6-min test run, go to <b>Stats</b> and find <b>Max HR</b> under Heart Rate.</p>
+          <p><b>Resting heart rate:</b> in <b>Garmin Connect</b>, open <b>Heart Rate</b> and use the <b>7-day average resting</b> figure.</p>
+        </div>
+        <div class="hrdev" data-dev="strava" hidden>
+          <p><b>Peak heart rate:</b> open your 6-min test run and scroll to the <b>Heart Rate</b> chart. <b>Max</b> is shown underneath it.</p>
+          <p><b>Resting heart rate:</b> Strava doesn’t track this. Count your pulse for 60 seconds when you wake up, on three mornings, and use the average.</p>
+        </div>
+        <ul class="hrtips">
+          <li>If your peak is 10 or more beats higher than anything you’ve seen before, it’s probably a sensor glitch. Use your next highest.</li>
+          <li>Seen a higher number in a race in the last six months? Use that.</li>
+          <li>Recorded your warm-up and test as one run? That’s fine. The highest number is still your test peak.</li>
+          <li>A chest strap reads more accurately than a watch during hard reps.</li>
+        </ul>
+      </details>
+      <div class="hrout" id="hrOut" role="status"></div>
+    </details>
   </section>
 
   <section class="strip" id="strip" aria-label="Your progress">
     <button class="shp" id="shProg" type="button">⬆ Share</button>
     <div class="nums" id="stripNums"></div>
     <div class="track"><div class="fill" id="stripFill" style="width:0%"></div></div>
+    <div class="wknav">
+      <button type="button" id="wkPrev" aria-label="Earlier week">‹</button>
+      <span id="wkLabel" aria-live="polite"></span>
+      <button type="button" id="wkNext" aria-label="Later week">›</button>
+    </div>
+    <div class="wkruns" id="wkRuns"></div>
   </section>
+
+  <div class="actions noprint">
+    <button class="btn" id="calToggle" type="button" aria-expanded="false" aria-controls="calBox">📅 Add</button>
+    <button class="btn" id="pdf" type="button">📄 PDF</button>
+    <button class="btn ghost" id="reset" type="button">Clear ticks</button>
+  </div>
 
   <details class="fold cal" id="calBox">
     <summary><span class="sum-t">📅 Add runs to your calendar</span><span class="sum-s" id="calSum"></span></summary>
@@ -338,10 +454,6 @@ footer .small{margin:0}
 
   <div class="bar noprint">
     <span class="progress" id="progress"></span>
-    <span>
-      <button class="btn ghost" id="reset" type="button">Clear ticks</button>
-      <button class="btn" id="pdf" type="button">📄 Save program as PDF</button>
-    </span>
     <span class="calmsg" id="pdfMsg" role="status" style="flex-basis:100%;margin:0"></span>
   </div>
 
@@ -359,6 +471,16 @@ footer .small{margin:0}
         <button class="btn ghost" id="shClose" type="button">Close</button>
       </div>
       <p class="calmsg" id="shMsg" role="status"></p>
+    </div>
+  </div>
+
+  <div class="shmodal" id="cfModal" hidden role="alertdialog" aria-modal="true" aria-labelledby="cfMsg">
+    <div class="shcard">
+      <p class="cfmsg" id="cfMsg"></p>
+      <div class="shrow">
+        <button class="btn" id="cfYes" type="button">Yes</button>
+        <button class="btn ghost" id="cfNo" type="button">Cancel</button>
+      </div>
     </div>
   </div>
 
