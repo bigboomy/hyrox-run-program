@@ -130,6 +130,133 @@ const PROGRAMS = {
  }
 };
 const PROG_KEYS = ["14","12","8"];
+
+/* ============================ CUSTOM PLAN (8–16 weeks) ============================
+   Built from rules, not typed out. Three inputs:
+   - race date  -> N weeks (8–16), counted back from race week
+   - background -> where the speed ladder starts (n new, r regular, e experienced)
+   - N          -> how high the ladder climbs before race-pace weeks
+   Rules (agreed Oct 2026):
+   - Last week is race week. The 1 (or 2 when N >= 14) weeks before it are race pace.
+   - The last round(N x 0.35) weeks are two runs a week.
+   - Deload at week 6 when N >= 10, and a second one the week before race pace when N >= 14.
+   - Retest at the end of week 4. A second retest in the second deload week (N >= 14),
+     so race-pace weeks use fresh paces.
+   - One ladder rung per loaded week. Longer plans add rungs at the bottom, never skip.
+   - Run 2: Zone 2 through the base, then Threshold. In the two-run block it alternates
+     Threshold and Zone 2, and race-pace weeks pair with Zone 2 (never two Threshold-pace runs).
+   - Threshold over 40 min is split into blocks.
+   - Strides after every Zone 2 run. Warm-up and cool-down on every hard session.
+   - Half race simulation replaces Run 2 once, 3–4 weeks out (N >= 10).
+   - New runners: no Run 3 (except retests), run/walk on the first two Zone 2 runs.
+   ================================================================================= */
+const LEVELS = {n:"New to running", r:"Regular runner", e:"Experienced"};
+const LEVEL_START = {n:0, r:1, e:3};
+const LADDER = [
+  {work:"6 × 400m", rest:"90 sec"},
+  {work:"8 × 400m", rest:"90 sec"},
+  {work:"10 × 400m", rest:"60–90 sec"},
+  {work:"800, 600, 400, 200 ×2 rounds", rest:"1 min", roundRest:"3 min"},
+  {work:"2×800, 2×600, 2×400", rest:"1 min"},
+  {work:"1000, 800, 600, 400 ×2 rounds", rest:"1 min", roundRest:"3 min"},
+  {work:"2×1000, 2×800, 2×600, 2×400", rest:"1 min", note:"Run these 10 sec under 5km pace (8/10 effort)."},
+  {work:"1200, 800, 400 ×2 rounds", rest:"90 sec", roundRest:"3 min"},
+  {work:"2×1200, 2×1000, 2×800", rest:"1 min"},
+  {work:"1500, 1000, 800, 400 ×2 rounds", rest:"1 min", roundRest:"3 min"},
+  {work:"2×1500, 2×1000, 2×800, 2×400", rest:"1 min"}
+];
+const Z2_RAMP = ["30 min continuous","30–40 min continuous","40–50 min continuous","50–60 min continuous","50–60 min continuous"];
+const TH_RAMP = [{work:"30–40 min continuous"},{work:"40 min continuous"},{work:"2 × 20 min", rest:"2 min easy jog"},
+  {work:"3 × 15 min", rest:"2 min easy jog"},{work:"2 × 25 min", rest:"2 min easy jog"},{work:"3 × 20 min", rest:"2 min easy jog"}];
+const DIST_RAMP = ["4km steady","4km steady","5km steady","6km steady","6km steady","8km steady","8km steady","10km steady","10km steady"];
+// Strides after Zone 2 runs are part of the session, so they sit in the main line ("30 min continuous + 6 × 20 sec strides").
+// The how-to opens from a "How to do strides" dropdown in the app, and appears as a short line in the PDF and calendar.
+const STRIDES_HOW = ["Each stride is about 20 sec, roughly 80–100m.",
+  "Build up over the first few seconds to fast but relaxed: about 80–90% effort, around your 1500m race pace. Not a sprint.",
+  "Stay tall, quick feet, relaxed shoulders and hands.",
+  "Walk back to the start before the next one, so every stride is done fresh.",
+  "Do them after the Zone 2 run, so your heart rate stays in Zone 2 for the run itself."];
+const STRIDES_SHORT = "Strides: build to fast but relaxed (80–90% effort, about 1500m race pace), walk back between each.";
+const RUNWALK_NOTE = "New to this? Run 4 min, walk 1 min, and build towards 30 min continuous.";
+const COMPROMISED_NOTE = "In the gym? Add one HYROX station between reps to practise running on tired legs.";
+const HALFSIM_NOTE = "Run each 1km at race pace, then go straight into a station at race weight. Rotate SkiErg, sled push, row and wall balls.";
+const EARLY_END_NOTE = "Your race is still a few weeks away, so do a 6-minute retest on the day this plan would have been race day. Then build a new plan: tap Custom, keep your race date and tap Rebuild. Use this result as your new 6-min test.";
+const RETEST2_NOTE = "Same as before: 10-minute easy warm-up, then 6 minutes hard. Enter the distance above. It sets your paces for the race-pace weeks.";
+
+function customLayout(N){
+  const k = N >= 14 ? 2 : 1;                       // race-pace weeks
+  const D1 = N >= 10 ? 6 : 0, D2 = N >= 14 ? N - k - 1 : 0;
+  const T = Math.round(N * 0.35);                  // two-run weeks at the end
+  return {k, D1, D2, twoFrom: N - T + 1, R1: 4, R2: D2,
+          HS: N >= 10 ? (N >= 14 ? N - 4 : N - 3) : 0,
+          baseTo: N >= 10 ? 5 : N - 5};
+}
+function buildCustom(N, lv, early){
+  const L = customLayout(N);
+  const rpFrom = N - L.k;
+  const loaded = [];
+  for(let w=1; w<rpFrom; w++) if(w !== L.D1 && w !== L.D2) loaded.push(w);
+  const start = Math.max(0, Math.min(LEVEL_START[lv] ?? 1, LADDER.length - loaded.length));
+  const phases = {0:"Pre-program"};
+  const S = [TEST_SESSION];
+  let li = start, z2 = 0, th = 0, d3 = 0, alt = 0;
+  const nStr = lv === "n" ? 4 : 6;
+  const z2Run = (w, work) => ({w, run:"Run 2", title:"Zone 2", zone:"hr", work: `${work} + ${nStr} × 20 sec strides`, stridesAfter:nStr});
+  const thRun = w => { const t = TH_RAMP[Math.min(th++, TH_RAMP.length-1)]; return Object.assign({w, run:"Run 2", title:"Threshold", zone:"lt", warm:10, cool:5}, t); };
+  for(let w=1; w<=N; w++){
+    const two = w >= L.twoFrom;
+    if(w === N){
+      phases[w] = early ? "Retest week" : "Race week";
+      S.push({w, run:"Run 1", title:"Steady intervals", zone:"aer", work:"8 × 400m", strides:2, rest:"90 sec"});
+      S.push({w, run:"Run 2", title:"Recovery", zone:"hr", work:"20–30 min continuous"});
+      // Plan finishes before the race: the day that would have been race day is a retest instead.
+      if(early) S.push({w, run:"Run 3", title:"Retest", zone:null, work:"6-minute max distance retest", test:true, note:EARLY_END_NOTE});
+      continue;
+    }
+    if(w >= rpFrom){
+      phases[w] = "Race specific";
+      const first = w === rpFrom;
+      S.push({w, run:"Run 1", title:"Race pace", zone:"lt", work: first ? "8 × 1km" : "8 × 1200m", strides:2, rest:"1 min", cool:5, racePace:true,
+              note: RACE_PACE_NOTE + " " + COMPROMISED_NOTE});
+      S.push(Object.assign(z2Run(w, "40–50 min continuous"), w === L.twoFrom ? {note: TWO_RUN_NOTE} : {}));
+      continue;
+    }
+    if(w === L.D1 || w === L.D2){
+      phases[w] = "Deload";
+      S.push({w, run:"Run 1", title:"Intervals", zone:"vo2", work:"8 × 400m", warm:5, rest:"1 min"});
+      S.push(z2Run(w, "30 min continuous"));
+      if(w === L.R2) S.push(Object.assign({w}, RETEST_SESSION, {note:RETEST2_NOTE, retest2:true}));
+      else if(lv !== "n") S.push({w, run:"Run 3", title:"Distance", zone:"aer", work:"4 × 1km", rest:"90 sec", walk:true});
+      continue;
+    }
+    // loaded week
+    phases[w] = w <= L.baseTo ? "Base" : "Build";
+    const r = LADDER[li++];
+    S.push(Object.assign({w, run:"Run 1", title:"Speed", zone:"vo2", cool:5}, li-1 <= 5 ? {warm:5} : {strides:3}, r));
+    let run2;
+    if(w === L.HS) run2 = {w, run:"Run 2", title:"Half sim", zone:"lt", work:"4 × (1km run + 1 station)", warm:10, cool:5, note:HALFSIM_NOTE};
+    else if(two) run2 = (alt++ % 2 === 0) ? thRun(w) : z2Run(w, "40–50 min continuous");
+    else if(w <= L.baseTo){
+      // New runners get two run/walk weeks first, then the same ramp from the bottom.
+      const ramp = lv === "n" ? ["30 min run/walk", "30 min run/walk"].concat(Z2_RAMP) : Z2_RAMP;
+      run2 = z2Run(w, ramp[Math.min(z2++, ramp.length-1)]);
+      if(/run\/walk/.test(run2.work)) run2.note = RUNWALK_NOTE;
+    }
+    else run2 = thRun(w);
+    if(w === L.twoFrom) run2.note = ((run2.note ? run2.note + " " : "") + TWO_RUN_NOTE);
+    S.push(run2);
+    if(w === L.R1) S.push(Object.assign({w}, RETEST_SESSION));
+    else if(!two && lv !== "n") S.push({w, run:"Run 3", title:"Distance", zone:"aer", work: DIST_RAMP[Math.min(d3++, DIST_RAMP.length-1)]});
+  }
+  return {key:`c${N}${lv}${early ? "x" : ""}`, label:"Custom", custom:true, early:!!early, weeks:N, level:lv, retest:L.R1, retest2:L.R2, phases, sessions:S};
+}
+// "c12r" -> registers and returns the generated program (or null if the key isn't a valid custom key).
+function ensureProgram(key){
+  if(PROGRAMS[key]) return PROGRAMS[key];
+  const m = /^c(\d{1,2})([nre])(x?)$/.exec(String(key||""));
+  if(!m || +m[1] < 8 || +m[1] > 16) return null;
+  return (PROGRAMS[key] = buildCustom(+m[1], m[2], m[3] === "x"));
+}
 let PROG = PROGRAMS["14"], PROGRAM = PROG.sessions, PHASES = PROG.phases;
 
 // Coaches shown in the picker. Add an entry here and it appears in the app.
@@ -198,8 +325,9 @@ const km2 = v => (Math.round(Number(v)*100)/100).toFixed(2);
 const KEY="hyroxRunProgram.v1";
 function load(){ try{ return JSON.parse(localStorage.getItem(KEY))||{}; }catch(e){ return {}; } }
 function save(s){ try{ localStorage.setItem(KEY, JSON.stringify(s)); }catch(e){} }
-let state = Object.assign({name:"",age:"",maf:"0",sent:"",email:"",coach:"",test:"",retest:"",restHr:"",peakHr:"",prog:"14",ticks:{},km:{},days:[],start:"",store:{}}, load());
-if(!PROGRAMS[state.prog]) state.prog = "14";
+let state = Object.assign({name:"",age:"",maf:"0",sent:"",email:"",coach:"",test:"",retest:"",retest2:"",restHr:"",peakHr:"",prog:"14",ticks:{},km:{},days:[],start:"",store:{},custom:{race:"",level:"r",start:"",n:0}}, load());
+if(!ensureProgram(state.prog)) state.prog = "14";
+if(!state.custom) state.custom = {race:"",level:"r",start:"",n:0};
 if(!state.store) state.store = {};
 PROG = PROGRAMS[state.prog]; PROGRAM = PROG.sessions; PHASES = PROG.phases;
 
@@ -214,7 +342,7 @@ function applyDefaultFolds(){
   $("youBox").open = !started || !state.unlocked;
 }
 function setProgram(key){
-  if(!PROGRAMS[key] || key === state.prog) return;
+  if(!ensureProgram(key) || key === state.prog) return;
   state.store[state.prog] = {ticks: state.ticks, km: state.km};
   const next = state.store[key] || {ticks:{}, km:{}};
   state.prog = key;
@@ -226,13 +354,20 @@ function setProgram(key){
 }
 function renderProgPick(){
   const box = $("progPick"); if(!box) return;
-  box.innerHTML = PROG_KEYS.map(k => `<button type="button" class="pg${k===state.prog?" on":""}" data-prog="${k}" aria-pressed="${k===state.prog}">${PROGRAMS[k].label}</button>`).join("");
-  const t1 = `Weeks 1–${PROG.retest}`, t2 = `Weeks ${PROG.retest+1}–${PROG.weeks}`;
-  if($("laneW1")) $("laneW1").textContent = t1;
-  if($("laneW2")) $("laneW2").textContent = t2;
-  if($("cal1")) $("cal1").textContent = `📅 Add test + ${t1}`;
+  const isC = !!PROG.custom, showC = customOpen;
+  box.innerHTML = PROG_KEYS.map(k => `<button type="button" class="pg${k===state.prog?" on":""}" data-prog="${k}" aria-pressed="${k===state.prog}">${PROGRAMS[k].label}</button>`).join("")
+    + `<button type="button" class="pg${isC?" on":""}" data-prog="custom" aria-pressed="${isC}" aria-expanded="${showC}" aria-controls="customBox"><span>Custom <span class="pgchev">${showC ? "\u25b4" : "\u25be"}</span></span>${isC ? `<small style="font-size:.8em;font-weight:600">${PROG.weeks} wk</small>` : ""}</button>`;
+  if($("customBox")) $("customBox").hidden = !showC;
+  renderCustomBox();
+  const bl = testBlocks();
+  const head = $("laneHead");
+  if(head){ head.classList.toggle("c3", bl.length === 3); head.innerHTML = `<span>Zone</span>` + bl.map(b => `<span>${bl.length === 3 ? "Wks" : "Weeks"} ${b.from}\u2013${b.to}</span>`).join(""); }
+  if($("lanes")) $("lanes").classList.toggle("c3", bl.length === 3);
+  if($("cal1")) $("cal1").textContent = `📅 Add test + Weeks 1–${PROG.retest}`;
   if($("retestLbl")) $("retestLbl").textContent = `Week ${PROG.retest} retest (metres)`;
   if($("retest")) $("retest").placeholder = `After Week ${PROG.retest}`;
+  if($("retest2Wrap")) $("retest2Wrap").hidden = !PROG.retest2;
+  if(PROG.retest2){ $("retest2Lbl").textContent = `Week ${PROG.retest2} retest (metres)`; $("retest2").placeholder = `After Week ${PROG.retest2}`; }
 }
 /* ============================ HEART RATE RECOVERY (optional) ============================
    Go HR = resting + 70% of (peak - resting). On speed runs the athlete rests at
@@ -272,11 +407,14 @@ function sessionParts(s, sp){
   if(s.rest) bits.push(go ? `${HR_FLOOR}\u2013${cap} sec between reps, start once you\u2019re at or below your go HR`
                           : `${s.rest}${s.walk ? " walk" : ""} between reps`);
   const round = s.roundRest ? `${s.roundRest} rest between rounds` : "";
-  return {warm, rest: bits.join(""), round, note: s.note || "", go};
+  const cool = s.cool ? `${s.cool} min easy` : "";
+  let note = s.note || "";
+  if(s.racePace && sp){ const p = pace(sp.lt); note += ` Race target: ${p.main} /km for each of your 8 race kms.`; }
+  return {warm, rest: bits.join(""), round, cool, strides: s.stridesAfter ? STRIDES_SHORT : "", note: note.trim(), go};
 }
 // The same thing as one line of text, for the PDF and calendar.
 function sessionFlat(p){
-  return [p.warm && `Warm-up: ${p.warm}.`, p.rest && `Rest: ${p.go ? p.rest.replace("your go HR", p.go + " bpm") : p.rest}.`, p.round && `Rounds: ${p.round}.`, p.note].filter(Boolean).join(" ");
+  return [p.warm && `Warm-up: ${p.warm}.`, p.cool && `Cool-down: ${p.cool}.`, p.strides, p.rest && `Rest: ${p.go ? p.rest.replace("your go HR", p.go + " bpm") : p.rest}.`, p.round && `Rounds: ${p.round}.`, p.note].filter(Boolean).join(" ");
 }
 function renderHr(){
   const x = hrInputs(), go = goNumber();
@@ -309,6 +447,85 @@ function applyLock(){
   $("sendBox").open = locked;
 }
 
+/* ============================ TEST BLOCKS ============================
+   Each block of weeks takes its paces from one test. A block whose test isn't
+   entered yet uses the latest earlier test that is. */
+function testBlocks(){
+  const b = [{from:1, to:PROG.retest, field:"test", label:"your test"}];
+  if(PROG.retest2){
+    b.push({from:PROG.retest+1, to:PROG.retest2, field:"retest", label:`your Week ${PROG.retest} retest`});
+    b.push({from:PROG.retest2+1, to:PROG.weeks, field:"retest2", label:`your Week ${PROG.retest2} retest`});
+  } else b.push({from:PROG.retest+1, to:PROG.weeks, field:"retest", label:"your retest"});
+  return b;
+}
+function blockFor(w){ const b = testBlocks(); return b.find(x => w <= x.to) || b[b.length-1]; }
+function speedsForWeek(w){
+  let sp = null;
+  for(const b of testBlocks()){ const v = parseFloat(state[b.field]); if(valid(v)) sp = speeds(v); if(w <= b.to) break; }
+  return sp;
+}
+function srcForWeek(w){
+  if(w === 0) return "";
+  const b = blockFor(w);
+  if(b.field === "test") return "Paces from your test";
+  return valid(parseFloat(state[b.field])) ? `Paces from ${b.label}` : "Using your latest test until the retest is entered";
+}
+
+/* ============================ CUSTOM PLAN SETUP ============================ */
+let customOpen = false;
+const DAY = 864e5;
+function mondayOf(d){ const x = new Date(d); x.setHours(0,0,0,0); x.setDate(x.getDate() - ((x.getDay()+6)%7)); return x; }
+// Works out the plan from a race date: weeks (8–16) and the Monday Week 1 starts.
+// startIso is optional: only offered when the race is more than 16 weeks away.
+function customFromRace(iso, startIso){
+  if(!iso) return {err:"Choose your race date."};
+  const raceMon = mondayOf(parseISO(iso));
+  const far = Math.round((raceMon - nextMonday()) / (7*DAY)) + 1 > 16;
+  let start = nextMonday();
+  if(far && startIso){
+    start = mondayOf(parseISO(startIso));
+    if(start < mondayOf(new Date())) return {far, err:"Pick a start date from this week onwards."};
+  }
+  const total = Math.round((raceMon - start) / (7*DAY)) + 1;
+  if(total < 8) return {far, err: far ? "That start leaves less than 8 weeks to your race. Pick an earlier start date." : "Your race is less than 8 weeks away. Pick the 8-week program, or a later race."};
+  const early = total > 16, n = early ? 16 : total;
+  return {n, start, raceMon, far, early, gap: total - 16};
+}
+function renderCustomBox(){
+  if(!$("customBox")) return;
+  const c = state.custom || {};
+  if(document.activeElement !== $("raceDate")) $("raceDate").value = c.race || "";
+  $("level").value = c.level || "r";
+  const pre = customFromRace($("raceDate").value);
+  $("cbStartWrap").hidden = !pre.far;
+  if(pre.far && document.activeElement !== $("cbStart")) $("cbStart").value = c.start || toISO(nextMonday());
+  const msg = $("customMsg"); msg.className = "cbmsg";
+  if(PROG.custom){
+    const endWk = fmtDay(addDays(parseISO(c.start), (PROG.weeks-1)*7));
+    msg.textContent = `Your plan: ${PROG.weeks} weeks for a ${LEVELS[PROG.level].toLowerCase()}. Week 1 starts ${fmtDay(parseISO(c.start))}, ` +
+      (PROG.early ? `and it finishes the week of ${endWk} with a retest, before your race. Then rebuild to take you to race day.` : `race week starts ${endWk}.`) +
+      ` Change the details and tap Rebuild to remake it.`;
+    $("customGo").textContent = "Rebuild my plan";
+  } else {
+    msg.textContent = "";
+    $("customGo").textContent = "Build my plan";
+  }
+}
+function previewCustom(){
+  const sw = $("cbStartWrap"), wasHidden = sw.hidden;
+  const pre = customFromRace($("raceDate").value);
+  sw.hidden = !pre.far;
+  if(pre.far && wasHidden && !$("cbStart").value) $("cbStart").value = toISO(nextMonday());
+  const r = customFromRace($("raceDate").value, pre.far ? $("cbStart").value : ""), msg = $("customMsg");
+  msg.className = "cbmsg" + (r.err ? " bad" : "");
+  if(r.err){ msg.textContent = $("raceDate").value ? r.err : ""; return; }
+  const end = fmtDay(addDays(r.start, (r.n-1)*7));
+  msg.textContent = r.early
+    ? `Heads up: your race is more than 16 weeks after this start date. You'll get a 16-week plan starting ${fmtDay(r.start)}. It finishes the week of ${end} with a retest, ${r.gap} week${r.gap===1?"":"s"} before your race. Then build a new plan to take you to race day. Or start on ${fmtDay(addDays(r.raceMon, -15*7))} and it finishes at your race.`
+    : `${r.n}-week plan. Week 1 starts ${fmtDay(r.start)}. Do your 6-min test the week before.`;
+}
+
+function progName(p){ return p.custom ? `${p.weeks}-week custom plan` : `${p.weeks}-week program`; }
 /* ============================ RENDER ============================ */
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -321,6 +538,7 @@ function render(){
   const hasT = valid(t), hasR = valid(r);
   $("testErr").textContent = state.test!=="" && !hasT ? "Enter a distance between 600 and 2600 m." : "";
   $("retestErr").textContent = state.retest!=="" && !hasR ? "Enter a distance between 600 and 2600 m." : "";
+  $("retest2Err").textContent = state.retest2!=="" && !valid(parseFloat(state.retest2)) ? "Enter a distance between 600 and 2600 m." : "";
   const s1 = hasT ? speeds(t) : null;
   const s2 = hasR ? speeds(r) : s1;
   const a = Number(state.age), hasA = validAge(a), hr = hasA ? zone2(a, state.maf) : null;
@@ -329,7 +547,8 @@ function render(){
   $("ageErr").textContent = state.age!=="" && !hasA ? "Enter an age between 12 and 90." : "";
 
   // print header
-  $("printhead").textContent = (hasT ? "6-min test: "+t+" m" : "") + (hasR ? "   |   Week "+PROG.retest+" retest: "+r+" m" : "");
+  const r2v = parseFloat(state.retest2);
+  $("printhead").textContent = (hasT ? "6-min test: "+t+" m" : "") + (hasR ? "   |   Week "+PROG.retest+" retest: "+r+" m" : "") + (PROG.retest2 && valid(r2v) ? "   |   Week "+PROG.retest2+" retest: "+r2v+" m" : "");
 
   // lanes
   $("lanes").innerHTML = `<div class="lane hr"><div class="z">${ZONES.hr.name}<small>${ZONES.hr.desc}</small></div>
@@ -340,7 +559,7 @@ function render(){
       const p = pace(s[z]); return `<div class="p">${p.main}<span>${p.fast}–${p.slow} /km</span></div>`;
     };
     return `<div class="lane ${z}"><div class="z">${ZONES[z].name}<small>${ZONES[z].desc}</small></div>
-      ${cell(s1,"Enter test")}${cell(hasR?s2:null, hasT?"After retest":"Enter test")}</div>`;
+      ${testBlocks().map((b,bi) => { const v = parseFloat(state[b.field]); return cell(valid(v) ? speeds(v) : null, bi===0 ? "Enter test" : (hasT ? "After retest" : "Enter test")); }).join("")}</div>`;
   }).join("") +
     (goNumber() ? `<div class="lane go"><div class="z">Go HR<small>Speed run rests</small></div>
       <div class="p span">${goNumber()} bpm<span>All speed runs \u00b7 start your next rep at or below ${goNumber()}</span></div></div>` : "");
@@ -353,7 +572,7 @@ function render(){
     if(s.w!==cur){
       if(cur!==-1) html += "</section>";
       cur = s.w;
-      const src = s.w===0 ? "" : s.w<=PROG.retest ? "Paces from your test" : (hasR ? "Paces from your retest" : "Using first test until retest is entered");
+      const src = srcForWeek(s.w);
       if(s.w===0) html += `<a class="btn ghost trackbtn noprint" id="trackLink" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=running+track+near+me">\ud83d\udccd Find a running track near me</a>`;
       html += `<section class="week"><h2>${s.w===0?"Before you start":"Week "+s.w}<span class="phase">${s.w===0?"":PHASES[s.w]}</span><span class="wpct" title="${wk[s.w].d} of ${wk[s.w].n} done">${Math.round(wk[s.w].d/wk[s.w].n*100)}%</span><span class="src">${src}</span></h2>`;
     }
@@ -361,7 +580,7 @@ function render(){
     const logged = !!(state.km[id] && state.km[id].km > 0);
     const planned = plannedKm(s.work);
     total++; if(checked) done++;
-    const sp = s.w<=PROG.retest ? s1 : s2;
+    const sp = speedsForWeek(s.w);
     let paceHtml = "";
     if(s.zone==="hr"){
       paceHtml = `<span class="pill hr">Zone 2</span>` + (hr ? `<b>${hr.text}</b><span>Heart rate</span>` : `<span>Enter your age</span>`);
@@ -373,14 +592,16 @@ function render(){
     const sx = sessionParts(s, sp);
     if(sx.go) paceHtml += `<div class="gohr">Go \u2264 ${sx.go} bpm</div>`;
     const spec = (sx.warm ? `<span class="k">Warm-up</span><span class="v">${esc(sx.warm)}</span>` : "") +
+                 (sx.cool ? `<span class="k">Cool-down</span><span class="v">${esc(sx.cool)}</span>` : "") +
                  (sx.rest ? `<span class="k">Rest</span><span class="v">${esc(sx.rest)}</span>` : "") +
                  (sx.round ? `<span class="k">Rounds</span><span class="v">${esc(sx.round)}</span>` : "");
     const min = checked && !openDone.has(id);
     html += `<div class="sess${s.opt?" opt":""}${s.test?" test":""}${checked?" done":""}${min?" min":""}">
       <input type="checkbox" id="${id}" ${checked?"checked":""} aria-label="Mark ${esc(s.run)} week ${s.w} done">
       <label class="what" for="${id}"><div class="run">${esc(runLabel(s))}</div><div class="title">${esc(s.title)}</div>
-        <div class="work">${esc(s.work)}</div>${spec?`<div class="spec">${spec}</div>`:""}${sx.note?`<div class="note">${esc(sx.note)}</div>`:""}</label>
+        <div class="work">${s.stridesAfter ? esc(s.work).replace(" + ", "<br>+ ") : esc(s.work)}</div>${spec?`<div class="spec">${spec}</div>`:""}${sx.note?`<div class="note">${esc(sx.note)}</div>`:""}</label>
       <div class="pace">${paceHtml}</div>
+      ${s.stridesAfter ? `<details class="howto"><summary>How to do strides</summary><ul>${STRIDES_HOW.map(x => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
       ${checked ? `<div class="mini">${logged ? `<span class="minikm">${km2(state.km[id].km)} km</span>` : ""}<button type="button" class="more" data-more="${id}" aria-expanded="${!min}">${min ? "Details" : "Hide"}</button></div>` : ""}
       ${s.test ? "" : `<details class="logbox" id="log${i}" ${logged?"open":""}>
         <summary>${logged ? `<span class="logged">✓ ${km2(state.km[id].km)} km logged</span>` : "Log run"}</summary>
@@ -416,7 +637,7 @@ $("cfModal").addEventListener("click", e=>{ if(e.target === $("cfModal")) cfClos
 document.addEventListener("keydown", e=>{ if(e.key === "Escape" && !$("cfModal").hidden) cfClose(false); });
 
 /* ============================ EVENTS ============================ */
-["name","age","email","test","retest"].forEach(k=>{
+["name","age","email","test","retest","retest2"].forEach(k=>{
   $(k).value = state[k]||"";
   $(k).addEventListener("input", e=>{ state[k]=e.target.value.trim(); save(state); render(); updateSummaries(); if(typeof updateCalHints==="function") updateCalHints(); });
 });
@@ -574,7 +795,7 @@ function loadLogo(){
 function shareLines(i){
   const s = PROGRAM[i];
   const t = parseFloat(state.test), r = parseFloat(state.retest);
-  const sp = s.w<=PROG.retest ? (valid(t)?speeds(t):null) : (valid(r)?speeds(r):(valid(t)?speeds(t):null));
+  const sp = speedsForWeek(s.w);
   const age = Number(state.age), hr = validAge(age) ? zone2(age, state.maf) : null;
   const key = s.zone || "ink";
   let target = "";
@@ -583,6 +804,7 @@ function shareLines(i){
   else if(s.zone) target = ZONES[s.zone].name;
   else if(s.test && s.w===0 && valid(t)) target = `${t} m in 6 minutes`;
   else if(s.test && s.w===PROG.retest && valid(r)) target = `${r} m in 6 minutes`;
+  else if(s.test && s.w===PROG.retest2 && valid(parseFloat(state.retest2))) target = `${parseFloat(state.retest2)} m in 6 minutes`;
   const e = state.km["s"+i];
   return {
     top: (s.w===0 ? "BEFORE YOU START" : `WEEK ${s.w} · ${PHASES[s.w].toUpperCase()}`) + ` · ${runLabel(s).toUpperCase()}`,
@@ -700,6 +922,7 @@ function drawProgress(canvas){
 }
 
 function drawCurrent(){
+  $("shCanvas").parentNode.classList.toggle("tall", shMode === "progress");
   if(shMode === "progress") drawProgress($("shCanvas"));
   else drawShare($("shCanvas"), shIndex);
 }
@@ -801,23 +1024,25 @@ function buildPDF(){
   if(pdfLogo){ try { doc.addImage(pdfLogo, "PNG", M, y - 1, markW, markH); } catch(e){} }
   const tx = M + markW + 5;
   doc.setFont("helvetica","bold"); doc.setFontSize(19); doc.setTextColor(...COL.ink);
-  doc.text(`HYROX Running Program – ${PROG.weeks} weeks`, tx, y+8.5);
+  doc.text(`HYROX Running Program – ${PROG.weeks} weeks${PROG.custom ? " (custom)" : ""}`, tx, y+8.5);
   doc.setFont("helvetica","normal"); doc.setFontSize(11); doc.setTextColor(...COL.muted);
   doc.text(pdfText("Prepared by @boomwilliams and @scotty_lev10"), tx, y+14.5); y += 23;
   doc.setFont("helvetica","normal"); doc.setFontSize(9.5); doc.setTextColor(...COL.muted);
   const bits = [];
   if (valid(t)) bits.push("6-min test: " + t + " m");
   bits.push("Week "+PROG.retest+" retest: " + (valid(r) ? r + " m" : "not entered"));
+  if (PROG.retest2) bits.push("Week "+PROG.retest2+" retest: " + (valid(parseFloat(state.retest2)) ? parseFloat(state.retest2) + " m" : "not entered"));
   if (validAge(age)) bits.push("Age: " + age);
   doc.text(pdfText(bits.join("   |   ")), M, y); y += 7;
 
   // Zones table
-  const colX = [M, M+46, M+46+(CW-46)/2];
+  const BL = testBlocks(), nc = BL.length, cw = (CW-46)/nc;
+  const colX = [M].concat(BL.map((b,bi) => M + 46 + bi*cw));
   doc.setFillColor(...COL.ink); doc.rect(M, y, CW, 7, "F");
   doc.setFont("helvetica","bold"); doc.setFontSize(9); doc.setTextColor(255,255,255);
-  doc.text("Zone", colX[0]+3, y+4.8); doc.text(`Weeks 1-${PROG.retest}`, colX[1]+2, y+4.8); doc.text(`Weeks ${PROG.retest+1}-${PROG.weeks}`, colX[2]+2, y+4.8);
+  doc.text("Zone", colX[0]+3, y+4.8); BL.forEach((b,bi) => doc.text(`Weeks ${b.from}-${b.to}`, colX[bi+1]+2, y+4.8));
   y += 7;
-  const zoneRow = (key, label, sub, c1, c2, span) => {
+  const zoneRow = (key, label, sub, cells, span) => {
     doc.setFillColor(...COL.soft); doc.rect(M, y, CW, 11, "F");
     doc.setFillColor(...COL[key]); doc.rect(M, y, 1.8, 11, "F");
     doc.setFont("helvetica","bold"); doc.setFontSize(10.5); doc.setTextColor(...COL[key]); doc.text(label, colX[0]+4, y+5);
@@ -825,22 +1050,24 @@ function buildPDF(){
     doc.setTextColor(...COL.ink);
     const cell = (x, v) => { doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.text(pdfText(v[0]), x+2, y+5);
       if (v[1]) { doc.setFont("helvetica","normal"); doc.setFontSize(7.5); doc.setTextColor(...COL.muted); doc.text(pdfText(v[1]), x+2, y+9); doc.setTextColor(...COL.ink); } };
-    cell(colX[1], c1); if (!span) cell(colX[2], c2);
+    if (span) cell(colX[1], cells); else cells.forEach((c, ci) => cell(colX[ci+1], c));
     y += 11.6;
   };
-  zoneRow("hr", "Zone 2 HR", "Zone 2 runs", hr ? [hr.text, "All weeks, stay at or below " + hr.high] : ["Enter age in app", ""], null, true);
+  zoneRow("hr", "Zone 2 HR", "Zone 2 runs", hr ? [hr.text, "All weeks, stay at or below " + hr.high] : ["Enter age in app", ""], true);
   for (const z of ["aer","lt","vo2"]) {
     const v = s => { if (!s) return ["Enter test in app",""]; const p = pace(s[z]); return [p.main + " /km", p.fast + "-" + p.slow + " /km"]; };
-    zoneRow(z, ZONES[z].name, ZONES[z].desc, v(s1), valid(r) ? v(s2) : (s1 ? ["After retest", `uses Weeks 1-${PROG.retest} until then`] : v(null)));
+    zoneRow(z, ZONES[z].name, ZONES[z].desc, BL.map((b,bi) => { const d = parseFloat(state[b.field]);
+      if (valid(d)) return v(speeds(d));
+      return bi === 0 || !s1 ? v(null) : ["After retest", "uses latest test until then"]; }));
   }
-  if (goNumber()) zoneRow("go", "Go HR", "Speed run rests", [goNumber() + " bpm", "All speed runs, start your next rep at or below " + goNumber()], null, true);
+  if (goNumber()) zoneRow("go", "Go HR", "Speed run rests", [goNumber() + " bpm", "All speed runs, start your next rep at or below " + goNumber()], true);
   y += 4;
 
   // Program
   const rightW = 44, leftX = M + 8, textW = CW - 8 - rightW - 4;
   let cur = -1;
   PROGRAM.forEach((s, i) => {
-    const sp = s.w <= PROG.retest ? s1 : s2;
+    const sp = speedsForWeek(s.w);
     const note = sessionFlat(sessionParts(s, sp));
     doc.setFontSize(8.5); const noteLines = note ? doc.splitTextToSize(pdfText(note), textW) : [];
     const hasRange = s.zone && s.zone !== "hr" && sp;
@@ -853,7 +1080,7 @@ function buildPDF(){
       doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(255,255,255);
       doc.text(s.w === 0 ? "Before you start" : `Week ${s.w}  -  ${PHASES[s.w]}`, M+3, y+5.2);
       if (s.w) { doc.setFont("helvetica","normal"); doc.setFontSize(8);
-        doc.text(s.w <= PROG.retest ? "Paces from your test" : (valid(r) ? "Paces from your retest" : "Paces from your first test"), W-M-3, y+5.2, {align:"right"}); }
+        doc.text(pdfText(srcForWeek(s.w)), W-M-3, y+5.2, {align:"right"}); }
       y += 9.5;
     }
     // tick box
@@ -943,6 +1170,7 @@ $("send").addEventListener("click", async ()=>{
   if(!valid(t)) return say("Enter your 6-min test distance first.", false);
   if(!$("consent").checked) return say("Tick the box to agree to sharing.", false);
   const dists = [t]; if(valid(r) && r!==t) dists.push(r);
+  const r2 = parseFloat(state.retest2); if(PROG.retest2 && valid(r2) && !dists.includes(r2)) dists.push(r2);
   $("send").disabled = true; st.textContent = "Saving…";
   try{
     const results = [];
@@ -967,7 +1195,7 @@ const ZONE_ICON = {hr:"🟩", aer:"🟦", lt:"🟨", vo2:"🟥"};
 
 function nextMonday(){
   const d = new Date(); d.setHours(0,0,0,0);
-  const add = (8 - ((d.getDay()+6)%7)) % 7 || 7;  // always the coming Monday
+  const add = 7 - ((d.getDay()+6)%7);  // always the coming Monday (Mon -> next Mon, Sun -> tomorrow)
   d.setDate(d.getDate()+add); return d;
 }
 function toISO(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
@@ -1025,7 +1253,7 @@ function buildEvents(fromWeek, toWeek, includeTest){
     const slots = datesInWindow(windowStart);
     const runNo = s.w===0 ? 1 : parseInt(s.run.replace(/\D/g,""),10);
     const date = slots[runNo-1];
-    const sp = s.w<=PROG.retest ? s1 : s2;
+    const sp = speedsForWeek(s.w);
     let title, desc = [];
     const age = Number(state.age), hr = validAge(age) ? zone2(age, state.maf) : null;
     if(s.zone==="hr"){
@@ -1119,13 +1347,53 @@ renderDays();
 renderCoaches();
 renderProgPick();
 $("progPick").addEventListener("click", async e=>{
-  const k = e.target.dataset && e.target.dataset.prog;
+  const btn = e.target.closest && e.target.closest("[data-prog]");
+  let k = btn && btn.dataset.prog;
   if(!k) return;
+  if(k === "custom"){
+    // The Custom button opens and closes the setup. If they've built a custom plan
+    // but are on another program, the first tap switches back to it.
+    const ck = state.custom && state.custom.n ? `c${state.custom.n}${state.custom.level}${state.custom.x ? "x" : ""}` : "";
+    if(!ck || PROG.custom || customOpen){
+      customOpen = !customOpen;
+      renderProgPick();
+      if(customOpen && !ck) $("raceDate").focus();
+      return;
+    }
+    k = ck; ensureProgram(k);
+  }
   if(k !== state.prog && (Object.keys(state.ticks).length || Object.keys(state.km).length)){
     const kept = state.store[k] && (Object.keys(state.store[k].ticks||{}).length || Object.keys(state.store[k].km||{}).length);
-    if(!(await askConfirm(`Switch to the ${PROGRAMS[k].weeks}-week program?\nYour ${PROG.weeks}-week ticks and distances are kept. Switch back any time to see them.` + (kept ? `\nYou already have progress saved on the ${PROGRAMS[k].weeks}-week program. It will be restored.` : ""), "Switch", "Cancel"))) return;
+    if(!(await askConfirm(`Switch to the ${progName(PROGRAMS[k])}?\nYour ${progName(PROG)} ticks and distances are kept. Switch back any time to see them.` + (kept ? `\nYou already have progress saved on the ${progName(PROGRAMS[k])}. It will be restored.` : ""), "Switch", "Cancel"))) return;
   }
+  if(!PROGRAMS[k].custom) customOpen = false;
+  else if(btn.dataset.prog === "custom") customOpen = true;   // one tap: switch to the custom plan AND open its setup
   setProgram(k);
+  renderProgPick();
+});
+
+$("raceDate").addEventListener("input", previewCustom);
+$("raceDate").addEventListener("change", previewCustom);
+$("cbStart").addEventListener("input", previewCustom);
+$("cbStart").addEventListener("change", previewCustom);
+$("customGo").addEventListener("click", async ()=>{
+  const pre = customFromRace($("raceDate").value);
+  const r = customFromRace($("raceDate").value, pre.far ? $("cbStart").value : ""), lv = $("level").value;
+  if(r.err){ const m = $("customMsg"); m.className = "cbmsg bad"; m.textContent = r.err; return; }
+  const key = `c${r.n}${lv}${r.early ? "x" : ""}`;
+  if(key !== state.prog && (Object.keys(state.ticks).length || Object.keys(state.km).length)){
+    if(!(await askConfirm(`Switch to a ${r.n}-week custom plan?\nYour ${progName(PROG)} ticks and distances are kept. Switch back any time to see them.`, "Switch", "Cancel"))) return;
+  }
+  state.custom = {race: $("raceDate").value, level: lv, start: toISO(r.start), n: r.n, x: !!r.early};
+  state.start = toISO(r.start);           // the calendar starts where the plan does
+  if($("startDate")) $("startDate").value = state.start;
+  ensureProgram(key);
+  customOpen = true;
+  if(key === state.prog){ save(state); renderProgPick(); render(); updateStrip(); updateCalHints(); updateSummaries(); }
+  else setProgram(key);
+  if(typeof renderDays === "function") renderDays();
+  customOpen = false;                     // plan built: fold the setup away
+  renderProgPick();
 });
 
 renderHr();

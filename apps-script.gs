@@ -1,6 +1,6 @@
 /** @boomwilliams – HYROX Run Program collector
  *  Results tab:  Timestamp, Name, Email, Distance (m), Coach, Program   — same email + same distance is recorded once.
- *  Progress tab: Email, Name, Week, Run, Session, Km, Done, Logged on, Updated, Coach, Program
+ *  Progress tab: Email, Name, Week, Run, Session, Km, Done, Logged on, Updated, Coach, Program (14, 12, 8 or custom like c15r)
  *                one row per session per athlete PER PROGRAM, updated in place.
  *                Blank Program on an old row means the 14-week block, so rows written
  *                before the 8/12-week programs existed keep updating in place.
@@ -77,7 +77,7 @@ function saveProgress(d) {
     const week = Number(en.week);
     const run = clean(en.run, 20);
     const km = en.km === '' || en.km === null ? '' : Math.round(Number(en.km) * 100) / 100;
-    if (!(week >= 0 && week <= 14) || !run) return;
+    if (!(week >= 0 && week <= 16) || !run) return;
     if (km !== '' && !(km >= 0 && km <= 80)) return;
     const p = prog(en) || which;
     const row = [email, name, week, run, clean(en.session, 60), km, en.done ? 'Yes' : '', en.on || '', now, who, p];
@@ -109,10 +109,13 @@ function coach(d) {
   return /^@[A-Za-z0-9._]+$/.test(c) ? c : '';
 }
 
-// Which program block the row belongs to: 14, 12 or 8 weeks.
+// Which program the row belongs to: 14, 12 or 8 weeks, or a custom plan
+// written as c + weeks + background, e.g. c15r = 15 weeks, regular runner (n new, e experienced).
+// A trailing x means the plan finishes with a retest before the race (race more than 16 weeks out).
 function prog(d) {
   const p = String(d && d.prog || '').trim();
-  return (p === '14' || p === '12' || p === '8') ? p : '';
+  if (p === '14' || p === '12' || p === '8') return p;
+  return /^c(8|9|1[0-6])[nre]x?$/.test(p) ? p : '';
 }
 
 // Adds a column heading to an existing sheet that predates it, leaving data alone.

@@ -79,7 +79,22 @@ button,input{font:inherit;color:inherit}
 .lane .p span{display:block;font-family:"Barlow",Arial,sans-serif;font-size:.94rem;font-weight:500;color:var(--muted);margin-top:2px}
 .lane .p.na{font-size:1rem;color:var(--muted);font-weight:600}
 .lanehead{display:grid;grid-template-columns:120px 1fr 1fr;padding:0 14px 4px;font-size:.78rem;color:var(--muted)}
-.go{--c:var(--go);--cb:var(--go-bg)} .hr{--c:var(--hr);--cb:var(--hr-bg)} .lane .p.span{grid-column:2/4} .aer{--c:var(--aer);--cb:var(--aer-bg)} .lt{--c:var(--lt);--cb:var(--lt-bg)} .vo2{--c:var(--vo2);--cb:var(--vo2-bg)}
+.lanes.c3 .lane,.lanehead.c3{grid-template-columns:110px 1fr 1fr 1fr}
+.lanes.c3 .lane .p{font-size:1.5rem}
+.lanes.c3 .lane .p.na{font-size:.9rem}
+@media(max-width:430px){.grp .lanes.c3 .lane,.grp .lanehead.c3{grid-template-columns:78px 1fr 1fr 1fr}.grp .lanes.c3 .lane .p{font-size:1.2rem}.grp .lanes.c3 .lane .p span{font-size:.72rem}.grp .lanes.c3 .lane .z{font-size:.88rem;padding-left:3px}.grp .lanes.c3 .lane .z small{font-size:.62rem}.grp .lanes.c3 .lane .p.na{font-size:.8rem}.grp .lanes.c3 .lane{padding:12px 6px 12px 9px}.grp .lanehead.c3{padding:0 6px 4px 9px}}
+.pgchev{font-size:.8em;opacity:.7;margin-left:0}
+.custombox{border:1px solid var(--rule);border-radius:10px;padding:14px;margin:4px 0 12px;background:var(--soft)}
+.custombox .cbintro{margin:0 0 10px;font-size:.9rem}
+.custombox .cbgrid{margin-bottom:8px}
+.custombox select{background:var(--bg,var(--soft));color:inherit;border:2px solid var(--rule);border-radius:8px;padding:10px 12px;font-size:1.05rem;width:100%}
+.custombox input[type=date]{-webkit-appearance:none;appearance:none;display:block;width:100%;min-width:0;box-sizing:border-box;min-height:48px;text-align:left;line-height:1.2;color:inherit}
+.custombox input[type=date]::-webkit-date-and-time-value{text-align:left;margin:0}
+.custombox select{box-sizing:border-box;min-height:48px}
+.custombox label{min-width:0}
+.cbmsg{font-size:.88rem;margin:0 0 10px;color:var(--muted)}
+.cbmsg.bad{color:var(--vo2)}
+.go{--c:var(--go);--cb:var(--go-bg)} .hr{--c:var(--hr);--cb:var(--hr-bg)} .lane .p.span{grid-column:2/-1} .aer{--c:var(--aer);--cb:var(--aer-bg)} .lt{--c:var(--lt);--cb:var(--lt-bg)} .vo2{--c:var(--vo2);--cb:var(--vo2-bg)}
 
 .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between;margin:14px 0 8px}
 .progress{font-size:.9rem;color:var(--muted)}
@@ -101,6 +116,13 @@ a.btn{display:block;text-align:center;text-decoration:none}
 .sess .title{font-weight:600}
 .sess .work{font-family:"Barlow Condensed",Arial,sans-serif;font-size:1.25rem;font-weight:700;line-height:1.15}
 .sess .note{font-size:.85rem;color:var(--muted)}
+.howto{grid-column:2/-1;font-size:.88rem;margin-top:2px}
+.howto>summary{cursor:pointer;color:var(--lt);font-weight:600;list-style:none;display:inline-block;padding:2px 0}
+.howto>summary::-webkit-details-marker{display:none}
+.howto>summary::after{content:" ▾"}
+.howto[open]>summary::after{content:" ▴"}
+.howto ul{margin:6px 0 2px;padding-left:18px;color:var(--muted)}
+.howto li{margin:2px 0}
 .sess .pace{text-align:right;white-space:nowrap}
 .pill{display:inline-block;background:var(--cb);color:var(--c);font-weight:700;font-size:.75rem;border-radius:4px;padding:1px 7px;margin-bottom:2px}
 .sess .pace b{display:block;font-family:"Barlow Condensed",Arial,sans-serif;font-size:1.35rem;line-height:1}
@@ -110,7 +132,7 @@ a.btn{display:block;text-align:center;text-decoration:none}
 .sess.done .work,.sess.done .title{text-decoration:line-through;text-decoration-thickness:2px;opacity:.6}
 .sess.min{padding:5.5px 0;align-items:center}
 .sess.min.test{padding:5.5px 8px}
-.sess.min .title,.sess.min .spec,.sess.min .note,.sess.min .pace,.sess.min .logbox{display:none}
+.sess.min .title,.sess.min .spec,.sess.min .note,.sess.min .pace,.sess.min .logbox,.sess.min .howto{display:none}
 .sess.min .what{display:flex;flex-wrap:wrap;gap:0 8px;align-items:baseline}
 .sess.min .work{font-size:1.05rem}
 .sess.min input[type=checkbox]{margin:0}
@@ -232,8 +254,8 @@ body:not(.locked) .lockmsg{display:none}
 .logged{color:var(--done);font-weight:600}
 .progsel{margin:0 0 18px}
 .progsel h2{font-family:"Barlow Condensed",Arial,sans-serif;font-weight:800;font-size:1.15rem;letter-spacing:.02em;text-transform:uppercase;margin:0 0 8px}
-#progPick{display:flex;gap:8px;flex-wrap:wrap}
-#progPick .pg{font-family:"Barlow Condensed",Arial,sans-serif;font-weight:700;font-size:1.15rem;letter-spacing:.02em;padding:9px 20px;border:1px solid var(--rule);border-radius:999px;background:transparent;color:var(--muted);cursor:pointer}
+#progPick{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:8px}
+#progPick .pg{white-space:nowrap;font-family:"Barlow Condensed",Arial,sans-serif;font-weight:700;font-size:clamp(.95rem,4.3vw,1.15rem);letter-spacing:.02em;padding:9px 4px;min-height:44px;line-height:1.1;text-align:center;border:1px solid var(--rule);border-radius:999px;background:transparent;color:var(--muted);cursor:pointer;display:flex;flex-direction:column;align-items:center;justify-content:center}
 #progPick .pg.on{background:var(--brand);border-color:var(--brand);color:#141414}
 #progPick .pg:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .strip{border:1px solid var(--rule);border-radius:10px;padding:12px 14px;margin:0 0 18px;background:var(--soft)}
@@ -276,6 +298,8 @@ body.locked .strip{display:none}
 .shcard .cfmsg{font-size:1rem;color:var(--ink);margin:0 0 14px;white-space:pre-line}
 .shprev{background:repeating-conic-gradient(var(--soft) 0% 25%, var(--rule) 0% 50%) 50%/16px 16px;border-radius:10px;padding:8px;margin-bottom:10px}
 .shprev canvas{width:100%;height:auto;display:block}
+/* story-size progress card: scale the preview down so the whole modal fits the screen height (export stays 1080×1920) */
+.shprev.tall canvas{width:auto;max-width:100%;max-height:calc(100vh - 310px);max-height:calc(100dvh - 310px);min-height:160px;margin:0 auto}
 .shrow{display:flex;gap:8px;flex-wrap:wrap}
 .install{margin:-8px 0 20px}
 .ihelp{margin-top:10px;border:1px solid var(--rule);background:var(--soft);border-radius:10px;padding:12px 14px;font-size:.9rem}
@@ -291,6 +315,7 @@ footer .small{margin:0}
 @media (max-width:520px){
   .inputs{grid-template-columns:1fr}
   .lane,.lanehead{grid-template-columns:92px 1fr 1fr}
+  .lanes.c3 .lane,.lanehead.c3{grid-template-columns:78px 1fr 1fr 1fr}
   .lane .p{font-size:1.5rem}
   .week h2 .src{display:none}
 }
@@ -298,6 +323,7 @@ footer .small{margin:0}
 
 @media print{
   @page{size:A4 portrait;margin:12mm}
+  .custombox{display:none!important}
   :root{--bg:#fff;--soft:#F4F5F7;--ink:#000;--muted:#555;--rule:#CCC}
   body{font-size:10.5pt}
   .wrap{max-width:none;padding:0}
@@ -367,6 +393,10 @@ footer .small{margin:0}
         <input id="retest" type="number" inputmode="numeric" min="600" max="2600" placeholder="After Week 4">
         <span class="err" id="retestErr"></span>
       </label>
+      <label class="big" id="retest2Wrap" hidden><span id="retest2Lbl">Week 11 retest (metres)</span>
+        <input id="retest2" type="number" inputmode="numeric" min="600" max="2600" placeholder="After Week 11">
+        <span class="err" id="retest2Err"></span>
+      </label>
     </div>
   </section>
 
@@ -390,7 +420,7 @@ footer .small{margin:0}
   <section aria-label="Your training zones">
     <details class="fold grp" id="speedBox">
       <summary><span class="sum-t">🏃 Your run speeds</span><span class="sum-s" id="speedSum"></span></summary>
-    <div class="lanehead"><span>Zone</span><span id="laneW1">Weeks 1–4</span><span id="laneW2">Weeks 5–14</span></div>
+    <div class="lanehead" id="laneHead"><span>Zone</span><span>Weeks 1–4</span><span>Weeks 5–14</span></div>
     <div class="lanes" id="lanes"></div>
     <p class="hint">Target pace per km, with the fast–slow range (±5% of speed) underneath. Zone 2 runs use heart rate (Maffetone MAF): 180 − age, adjusted for your training history. Stay at or below the top number.</p>
     <details class="fold hrbox" id="hrBox">
@@ -486,6 +516,26 @@ footer .small{margin:0}
   <section class="progsel" aria-label="Choose your program length">
     <h2>Program length</h2>
     <div id="progPick" role="group" aria-label="Program length"></div>
+    <div class="custombox" id="customBox" hidden>
+      <p class="cbintro"><b>Build your own plan.</b> Enter your race date and the app counts back from race week (8–16 weeks).</p>
+      <div class="inputs cbgrid">
+        <label>Race date
+          <input type="date" id="raceDate">
+        </label>
+        <label id="cbStartWrap" class="full" hidden>Start my plan on
+          <input type="date" id="cbStart">
+        </label>
+        <label>Running background
+          <select id="level">
+            <option value="n">New to running</option>
+            <option value="r">Regular runner</option>
+            <option value="e">Experienced</option>
+          </select>
+        </label>
+      </div>
+      <p class="cbmsg" id="customMsg" role="status"></p>
+      <button class="btn" id="customGo" type="button">Build my plan</button>
+    </div>
     <p class="hint">Pick the block that fits the time you have before race day. Your ticks and logged distances are saved separately for each, so switching is safe and you can switch back.</p>
   </section>
 
