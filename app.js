@@ -516,9 +516,9 @@ function progressTotals(){
   });
   return {runs, total, week, list, pct: Math.min(100, Math.round(runs/PROGRAM.length*100))};
 }
-/* "Next run" shortcut: first unticked, non-optional session in plan order. */
+/* "Next run" shortcut: first unticked session in plan order (the Run 3 distance runs count too). */
 function nextRunIndex(){
-  let i = PROGRAM.findIndex((s,k)=> !s.opt && !state.ticks["s"+k]);
+  let i = PROGRAM.findIndex((s,k)=> !state.ticks["s"+k]);
   return i;
 }
 function updateNext(){
@@ -860,7 +860,7 @@ function buildPDF(){
     doc.setDrawColor(...COL.muted); doc.setLineWidth(0.3); doc.rect(M+1, y+1.2, 4, 4);
     // left text
     doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...COL.muted);
-    doc.text(pdfText(runLabel(s) + "  |  " + s.title + (s.opt ? " (optional)" : "")), leftX, y+2.6);
+    doc.text(pdfText(runLabel(s) + "  |  " + s.title ), leftX, y+2.6);
     doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(...(s.opt ? COL.muted : COL.ink));
     doc.text(pdfText(s.work), leftX, y+7.3);
     if (noteLines.length) { doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...COL.muted); doc.text(noteLines, leftX, y+11); }
@@ -1033,7 +1033,7 @@ function buildEvents(fromWeek, toWeek, includeTest){
       desc.push(hr ? `Zone 2 heart rate: ${hr.text}. Stay at or below ${hr.high} bpm (Maffetone MAF).` : "Enter your age in the app to see your Zone 2 heart rate.");
     } else if(s.zone){
       const p = sp ? pace(sp[s.zone]) : null;
-      title = `${ZONE_ICON[s.zone]} ${s.title} – ${s.work}${p?" @ "+p.main+"/km":""}${s.opt?" (optional)":""}`;
+      title = `${ZONE_ICON[s.zone]} ${s.title} – ${s.work}${p?" @ "+p.main+"/km":""}`;
       desc.push(p ? `${ZONES[s.zone].name} pace: ${p.main} /km (range ${p.fast}–${p.slow})` : "Enter your 6-min test in the app to see your pace.");
     } else {
       title = `📋 ${s.title} – ${s.work}`;
