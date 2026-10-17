@@ -92,7 +92,8 @@ a.btn{display:block;text-align:center;text-decoration:none}
 .week{margin-top:26px;break-inside:avoid-page}
 .week h2{display:flex;align-items:baseline;gap:10px;margin:0 0 6px;font-size:1.7rem;font-weight:800;border-bottom:3px solid var(--ink);padding-bottom:2px}
 .week h2 .phase{font-size:1rem;font-weight:600;color:var(--muted)}
-.week h2 .src{margin-left:auto;font-family:"Barlow",Arial,sans-serif;font-size:.75rem;font-weight:500;color:var(--muted)}
+.week h2 .wpct{margin-left:auto;font-family:"Barlow",Arial,sans-serif;font-size:.85rem;font-weight:600;color:var(--muted);white-space:nowrap}
+.week h2 .src{margin-left:0;font-family:"Barlow",Arial,sans-serif;font-size:.75rem;font-weight:500;color:var(--muted)}
 .sess{display:grid;grid-template-columns:34px 1fr auto;gap:4px 10px;padding:10px 0;border-bottom:1px solid var(--rule);align-items:start}
 .sess input[type=checkbox]{width:22px;height:22px;margin:3px 0 0;accent-color:var(--done);cursor:pointer}
 .sess .what{min-width:0}
@@ -156,6 +157,17 @@ a.btn{display:block;text-align:center;text-decoration:none}
 .sum-t{font-family:"Barlow Condensed",Arial,sans-serif;font-weight:700;font-size:1.3rem;line-height:1.1}
 .sum-s{flex-basis:100%;font-size:.85rem;color:var(--muted);order:3}
 .fold[open]>summary{margin-bottom:10px}
+@media(max-width:430px){.grp .lane,.grp .lanehead{grid-template-columns:92px 1fr 1fr}.grp .lane{padding:12px 8px 12px 10px}.grp .lanehead{padding:0 8px 4px 10px}.grp .lane .z{font-size:1.05rem;padding-left:4px}.grp .lane .p{font-size:1.5rem}.grp .lane .p.na{font-size:.95rem}}
+.foldrow{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 0 18px;align-items:stretch}
+.foldrow>section{display:flex}
+.foldrow>section>.grp{flex:1;min-width:0}
+.foldrow .grp>summary .sum-t{flex:1 1 0;min-width:0}
+.foldrow:has(details[open]){grid-template-columns:1fr}
+.foldrow .grp{margin:0}
+.foldrow:not(:has(details[open])) .sum-t{font-size:1.05rem}
+.foldrow:not(:has(details[open])) .grp{padding:12px}
+.foldrow:not(:has(details[open])) .sum-s{font-size:.75rem}
+.grp{display:block;border:1px solid var(--rule);border-radius:10px;padding:14px;margin:0 0 18px;background:var(--soft)}
 .mafbox{grid-column:1/-1;border:2px solid var(--rule);border-radius:8px;padding:9px 12px;background:var(--soft)}
 .mafbox>summary{font-size:.9rem}
 .mafbox .lab{color:var(--muted)}
@@ -226,10 +238,20 @@ body:not(.locked) .lockmsg{display:none}
 #progPick .pg.on{background:var(--brand);border-color:var(--brand);color:#141414}
 #progPick .pg:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
 .strip{border:1px solid var(--rule);border-radius:10px;padding:12px 14px;margin:0 0 18px;background:var(--soft)}
-.strip .nums{display:flex;flex-wrap:wrap;gap:6px 18px;align-items:baseline}
+.strip .nums{display:flex;flex-wrap:wrap;gap:6px 12px;align-items:baseline}
 .strip .n{font-family:"Barlow Condensed",Arial,sans-serif;font-weight:800;font-size:1.6rem;line-height:1}
+@media(max-width:430px){.strip .nums{gap:6px 10px}.strip .n{font-size:1.4rem}}
 .strip .n small{display:block;font-family:"Barlow",Arial,sans-serif;font-weight:500;font-size:.72rem;color:var(--muted);letter-spacing:.04em;text-transform:uppercase}
-.strip .track{height:8px;border-radius:5px;background:var(--rule);margin-top:10px;overflow:hidden}
+.nextbtn{display:block;width:100%;margin:0 0 10px;padding:12px 14px;text-align:left;font-size:1rem;white-space:normal}
+.nextbtn small{display:block;font-weight:500;font-size:.75rem;letter-spacing:.04em;text-transform:uppercase;opacity:.8}
+.nextbtn[hidden]{display:none}
+.sess.flash{animation:flash 1.6s ease-out}
+@keyframes flash{0%,40%{background:var(--lt-bg,#fff3c4)}100%{background:transparent}}
+.sess{scroll-margin-top:12px}
+.locked .nextbtn{display:none!important}
+.strip .trackrow{display:flex;align-items:center;gap:10px;margin-top:10px;clear:both}
+.strip .track{flex:1;height:8px;border-radius:5px;background:var(--rule);overflow:hidden}
+.strip .tpct{font-family:"Barlow Condensed",Arial,sans-serif;font-weight:800;font-size:1.15rem;line-height:1;min-width:2.6em;text-align:right}
 .strip .fill{height:100%;background:var(--brand);border-radius:5px}
 .strip .shp{float:right;background:transparent;border:1px solid var(--rule);border-radius:8px;color:var(--muted);font-size:1.125rem;padding:6px 14px;cursor:pointer}
 .wknav{display:flex;align-items:center;gap:10px;margin-top:12px}
@@ -313,6 +335,9 @@ footer .small{margin:0}
     Your program structure is below. Enter your details and tap <b style="display:inline;font-size:1rem">Unlock my program</b> to reveal your session paces, calendar export and PDF.
   </div>
 
+  <div class="foldrow">
+  <details class="fold grp" id="youBox">
+    <summary><span class="sum-t">👤 Your details &amp; test result</span><span class="sum-s" id="youSum"></span></summary>
   <section class="inputs" aria-label="Your test results">
     <div class="row2 nameage">
       <label>Athlete name
@@ -362,14 +387,10 @@ footer .small{margin:0}
     <label class="consent"><input id="consent" type="checkbox"> <span>I agree to share my name, email and test results with my coach for this program.</span></label>
     <button class="btn" id="send" type="button">Save my results</button><span class="status" id="sendStatus" role="status"></span>
   </details>
-
-  <section class="progsel" aria-label="Choose your program length">
-    <h2>Program length</h2>
-    <div id="progPick" role="group" aria-label="Program length"></div>
-    <p class="hint">Pick the block that fits the time you have before race day. Your ticks and logged distances are saved separately for each, so switching is safe and you can switch back.</p>
-  </section>
-
+  </details>
   <section aria-label="Your training zones">
+    <details class="fold grp" id="speedBox">
+      <summary><span class="sum-t">🏃 Your run speeds</span><span class="sum-s" id="speedSum"></span></summary>
     <div class="lanehead"><span>Zone</span><span id="laneW1">Weeks 1–4</span><span id="laneW2">Weeks 5–14</span></div>
     <div class="lanes" id="lanes"></div>
     <p class="hint">Target pace per km, with the fast–slow range (±5% of speed) underneath. Zone 2 runs use heart rate (Maffetone MAF): 180 − age, adjusted for your training history. Stay at or below the top number.</p>
@@ -415,12 +436,14 @@ footer .small{margin:0}
       </details>
       <div class="hrout" id="hrOut" role="status"></div>
     </details>
+    </details>
   </section>
+  </div>
 
   <section class="strip" id="strip" aria-label="Your progress">
     <button class="shp" id="shProg" type="button">⬆ Share</button>
     <div class="nums" id="stripNums"></div>
-    <div class="track"><div class="fill" id="stripFill" style="width:0%"></div></div>
+    <div class="trackrow"><div class="track"><div class="fill" id="stripFill" style="width:0%"></div></div><span class="tpct" id="stripPct">0%</span></div>
     <div class="wknav">
       <button type="button" id="wkPrev" aria-label="Earlier week">‹</button>
       <span id="wkLabel" aria-live="polite"></span>
@@ -428,6 +451,8 @@ footer .small{margin:0}
     </div>
     <div class="wkruns" id="wkRuns"></div>
   </section>
+
+  <button class="btn nextbtn noprint" id="nextRun" type="button" hidden></button>
 
   <div class="actions noprint">
     <button class="btn" id="calToggle" type="button" aria-expanded="false" aria-controls="calBox">📅 Add</button>
@@ -458,6 +483,12 @@ footer .small{margin:0}
     <span class="progress" id="progress"></span>
     <span class="calmsg" id="pdfMsg" role="status" style="flex-basis:100%;margin:0"></span>
   </div>
+
+  <section class="progsel" aria-label="Choose your program length">
+    <h2>Program length</h2>
+    <div id="progPick" role="group" aria-label="Program length"></div>
+    <p class="hint">Pick the block that fits the time you have before race day. Your ticks and logged distances are saved separately for each, so switching is safe and you can switch back.</p>
+  </section>
 
   <div id="program"></div>
 

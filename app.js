@@ -205,6 +205,14 @@ PROG = PROGRAMS[state.prog]; PROGRAM = PROG.sessions; PHASES = PROG.phases;
 
 /* Switching program parks the current ticks/km under the old key and restores
    whatever was saved for the new one, so a switch never destroys history. */
+/* Once an athlete has ticked something in Week 1 they are into the routine, so the
+   details and run-speeds panels start folded. Only applied on load and program switch,
+   never while they are using the page. */
+function applyDefaultFolds(){
+  const started = PROGRAM.some((s,i)=> s.w===1 && state.ticks["s"+i]);
+  $("speedBox").open = !started;
+  $("youBox").open = !started || !state.unlocked;
+}
 function setProgram(key){
   if(!PROGRAMS[key] || key === state.prog) return;
   state.store[state.prog] = {ticks: state.ticks, km: state.km};
@@ -214,7 +222,7 @@ function setProgram(key){
   state.km = next.km || {};
   PROG = PROGRAMS[key]; PROGRAM = PROG.sessions; PHASES = PROG.phases;
   save(state);
-  renderProgPick(); render(); updateStrip(); updateCalHints(); updateSummaries(); queueSync();
+  renderProgPick(); render(); updateStrip(); updateCalHints(); updateSummaries(); applyDefaultFolds(); queueSync();
 }
 function renderProgPick(){
   const box = $("progPick"); if(!box) return;
@@ -253,6 +261,8 @@ function restCap(s){
 }
 // Warm-up, rest and note for a session. The Rest text is the timed rest from the program,
 // or the heart rate version when the athlete has a go HR and the session is a speed run.
+// Display name for a run: "Run 3.1" = week 3, run 1. Stored data keeps the plain "Run 1".
+function runLabel(s){ const n = parseInt(String(s.run).replace(/\D/g,""),10); return s.w>0 && n ? `Run ${s.w}.${n}` : s.run; }
 function sessionParts(s, sp){
   const cap = restCap(s), go = cap ? goNumber() : null;
   let warm = "";
@@ -337,13 +347,15 @@ function render(){
 
   // program
   let html = "", cur = -1, total = 0, done = 0;
+  const wk = {};
+  PROGRAM.forEach((s,i)=>{ const o = wk[s.w] || (wk[s.w] = {n:0, d:0}); o.n++; if(state.ticks["s"+i]) o.d++; });
   PROGRAM.forEach((s,i)=>{
     if(s.w!==cur){
       if(cur!==-1) html += "</section>";
       cur = s.w;
       const src = s.w===0 ? "" : s.w<=PROG.retest ? "Paces from your test" : (hasR ? "Paces from your retest" : "Using first test until retest is entered");
       if(s.w===0) html += `<a class="btn ghost trackbtn noprint" id="trackLink" target="_blank" rel="noopener" href="https://www.google.com/maps/search/?api=1&query=running+track+near+me">\ud83d\udccd Find a running track near me</a>`;
-      html += `<section class="week"><h2>${s.w===0?"Before you start":"Week "+s.w}<span class="phase">${s.w===0?"":PHASES[s.w]}</span><span class="src">${src}</span></h2>`;
+      html += `<section class="week"><h2>${s.w===0?"Before you start":"Week "+s.w}<span class="phase">${s.w===0?"":PHASES[s.w]}</span><span class="wpct" title="${wk[s.w].d} of ${wk[s.w].n} done">${Math.round(wk[s.w].d/wk[s.w].n*100)}%</span><span class="src">${src}</span></h2>`;
     }
     const id = "s"+i, checked = !!state.ticks[id];
     const logged = !!(state.km[id] && state.km[id].km > 0);
@@ -366,7 +378,7 @@ function render(){
     const min = checked && !openDone.has(id);
     html += `<div class="sess${s.opt?" opt":""}${s.test?" test":""}${checked?" done":""}${min?" min":""}">
       <input type="checkbox" id="${id}" ${checked?"checked":""} aria-label="Mark ${esc(s.run)} week ${s.w} done">
-      <label class="what" for="${id}"><div class="run">${esc(s.run)}</div><div class="title">${esc(s.title)}</div>
+      <label class="what" for="${id}"><div class="run">${esc(runLabel(s))}</div><div class="title">${esc(s.title)}</div>
         <div class="work">${esc(s.work)}</div>${spec?`<div class="spec">${spec}</div>`:""}${sx.note?`<div class="note">${esc(sx.note)}</div>`:""}</label>
       <div class="pace">${paceHtml}</div>
       ${checked ? `<div class="mini">${logged ? `<span class="minikm">${km2(state.km[id].km)} km</span>` : ""}<button type="button" class="more" data-more="${id}" aria-expanded="${!min}">${min ? "Details" : "Hide"}</button></div>` : ""}
@@ -406,11 +418,11 @@ document.addEventListener("keydown", e=>{ if(e.key === "Escape" && !$("cfModal")
 /* ============================ EVENTS ============================ */
 ["name","age","email","test","retest"].forEach(k=>{
   $(k).value = state[k]||"";
-  $(k).addEventListener("input", e=>{ state[k]=e.target.value.trim(); save(state); render(); if(typeof updateCalHints==="function") updateCalHints(); });
+  $(k).addEventListener("input", e=>{ state[k]=e.target.value.trim(); save(state); render(); updateSummaries(); if(typeof updateCalHints==="function") updateCalHints(); });
 });
 ["restHr","peakHr"].forEach(k=>{
   $(k).value = state[k]||"";
-  $(k).addEventListener("input", e=>{ state[k]=e.target.value.trim(); save(state); renderHr(); render(); });
+  $(k).addEventListener("input", e=>{ state[k]=e.target.value.trim(); save(state); renderHr(); render(); updateSummaries(); });
 });
 $("hrDevices").addEventListener("click", e=>{
   const d = e.target.dataset && e.target.dataset.dev; if(!d) return;
@@ -504,6 +516,28 @@ function progressTotals(){
   });
   return {runs, total, week, list, pct: Math.min(100, Math.round(runs/PROGRAM.length*100))};
 }
+/* "Next run" shortcut: first unticked, non-optional session in plan order. */
+function nextRunIndex(){
+  let i = PROGRAM.findIndex((s,k)=> !s.opt && !state.ticks["s"+k]);
+  return i;
+}
+function updateNext(){
+  const b = $("nextRun"); if(!b) return;
+  const i = nextRunIndex();
+  if(i < 0){ b.hidden = true; return; }
+  const s = PROGRAM[i];
+  const where = s.w===0 ? "Before you start" : `Week ${s.w}`;
+  b.hidden = false;
+  b.dataset.i = i;
+  b.innerHTML = `<small>Next run \u00b7 ${esc(where)}</small>\u25b6 ${esc(s.w===0 ? s.title : runLabel(s) + " \u00b7 " + s.title)}`;
+}
+$("nextRun").addEventListener("click", ()=>{
+  const i = +$("nextRun").dataset.i, box = $("s"+i); if(!box) return;
+  const row = box.closest(".sess"); if(!row) return;
+  const calm = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  row.scrollIntoView({behavior: calm ? "auto" : "smooth", block:"start"});
+  row.classList.remove("flash"); void row.offsetWidth; row.classList.add("flash");
+});
 function updateStrip(){
   const min = minWeekOffset();
   if(weekOffset < min) weekOffset = min;
@@ -513,11 +547,13 @@ function updateStrip(){
     `<span class="n">${km2(p.total)}<small>Total km</small></span>` +
     `<span class="n">${km2(p.week)}<small>${weekName(weekOffset)}</small></span>`;
   $("stripFill").style.width = p.pct + "%";
+  $("stripPct").textContent = p.pct + "%";
+  updateNext();
   $("wkLabel").innerHTML = `${weekName(weekOffset)}<small>${fmtDay(w.start)} \u2013 ${fmtDay(w.last)}</small>`;
   $("wkPrev").disabled = weekOffset <= min;
   $("wkNext").disabled = weekOffset >= 0;
   $("wkRuns").innerHTML = p.list.length
-    ? p.list.map(r => `<div class="wkrun"><span><span class="wkw">${r.s.w===0?"Before you start":"Week "+r.s.w} \u00b7 ${esc(r.s.run)} \u00b7 ${esc(r.s.title)}</span>${esc(r.s.work)}</span><span class="wkkm">${km2(r.km)} km</span><button type="button" data-share="${r.i}" aria-label="Share this run">\u2b06 Share</button></div>`).join("")
+    ? p.list.map(r => `<div class="wkrun"><span><span class="wkw">${r.s.w===0?"Before you start":"Week "+r.s.w} \u00b7 ${esc(runLabel(r.s))} \u00b7 ${esc(r.s.title)}</span>${esc(r.s.work)}</span><span class="wkkm">${km2(r.km)} km</span><button type="button" data-share="${r.i}" aria-label="Share this run">\u2b06 Share</button></div>`).join("")
     : `<p class="wkempty">${weekOffset===0 ? "No distances logged yet this week." : "No distances logged that week."}</p>`;
 }
 /* ============================ SHARE IMAGE ============================ */
@@ -549,7 +585,7 @@ function shareLines(i){
   else if(s.test && s.w===PROG.retest && valid(r)) target = `${r} m in 6 minutes`;
   const e = state.km["s"+i];
   return {
-    top: (s.w===0 ? "BEFORE YOU START" : `WEEK ${s.w} · ${PHASES[s.w].toUpperCase()}`) + ` · ${s.run.toUpperCase()}`,
+    top: (s.w===0 ? "BEFORE YOU START" : `WEEK ${s.w} · ${PHASES[s.w].toUpperCase()}`) + ` · ${runLabel(s).toUpperCase()}`,
     work: s.work, target, key,
     km: e && e.km > 0 ? km2(e.km) : null
   };
@@ -824,7 +860,7 @@ function buildPDF(){
     doc.setDrawColor(...COL.muted); doc.setLineWidth(0.3); doc.rect(M+1, y+1.2, 4, 4);
     // left text
     doc.setFont("helvetica","normal"); doc.setFontSize(8); doc.setTextColor(...COL.muted);
-    doc.text(pdfText(s.run + "  |  " + s.title + (s.opt ? " (optional)" : "")), leftX, y+2.6);
+    doc.text(pdfText(runLabel(s) + "  |  " + s.title + (s.opt ? " (optional)" : "")), leftX, y+2.6);
     doc.setFont("helvetica","bold"); doc.setFontSize(11); doc.setTextColor(...(s.opt ? COL.muted : COL.ink));
     doc.text(pdfText(s.work), leftX, y+7.3);
     if (noteLines.length) { doc.setFont("helvetica","normal"); doc.setFontSize(8.5); doc.setTextColor(...COL.muted); doc.text(noteLines, leftX, y+11); }
@@ -1032,6 +1068,10 @@ function downloadICS(filename, text){
 }
 
 function updateSummaries(){
+  const nm = (state.name||"").trim();
+  $("youSum").textContent = [nm, state.test ? state.test+" m test" : ""].filter(Boolean).join(" \u00b7 ") || "Add your name and 6-min test result";
+  const gz = goNumber();
+  $("speedSum").textContent = "Target pace per km for each zone" + (gz ? ` \u00b7 go HR ${gz} bpm` : "");
   $("sendSum").textContent = state.sent ? `✓ Sent: ${state.sent}` : "Not sent yet";
   const d = state.days.length===3 ? state.days.map(i=>DAY_NAMES[i]).join(" · ") : "Choose 3 days";
   const st = state.start ? parseISO(state.start).toLocaleDateString(undefined,{day:"numeric",month:"short"}) : "";
@@ -1094,6 +1134,7 @@ updateCalHints();
 updateSummaries();
 applyLock();
 updateStrip();
+applyDefaultFolds();
 
 /* ============================ ADD TO HOME SCREEN ============================ */
 (function(){ try {
