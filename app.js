@@ -401,7 +401,7 @@ function runLabel(s){ const n = parseInt(String(s.run).replace(/\D/g,""),10); re
 function sessionParts(s, sp){
   const cap = restCap(s), go = cap ? goNumber() : null;
   let warm = "";
-  if(s.strides) warm = `5 min + ${s.strides} \u00d7 200m strides${sp ? " at " + pace(sp.vo2).main + " /km" : ""}`;
+  if(s.strides) warm = `5 min + ${s.strides} \u00d7 200m strides${sp ? " at " + pace(sp.vo2).main + " /km" : ""}, walk back about 90 sec between`;
   else if(s.warm) warm = `${s.warm} min`;
   const bits = [];
   if(s.rest) bits.push(go ? `${HR_FLOOR}\u2013${cap} sec between reps, start once you\u2019re at or below your go HR`
@@ -601,6 +601,7 @@ function render(){
       <label class="what" for="${id}"><div class="run">${esc(runLabel(s))}</div><div class="title">${esc(s.title)}</div>
         <div class="work">${s.stridesAfter ? esc(s.work).replace(" + ", "<br>+ ") : esc(s.work)}</div>${spec?`<div class="spec">${spec}</div>`:""}${sx.note?`<div class="note">${esc(sx.note)}</div>`:""}</label>
       <div class="pace">${paceHtml}</div>
+      ${WATCH_OK(s) ? `<div class="watbox"><button class="wat" type="button" data-wat="${i}">\u231a Add to watch (test)</button><span class="watmsg" role="status"></span><details class="howto"><summary>How to put it on your Garmin</summary><ul>${WATCH_GUIDE.map(x => `<li>${esc(x)}</li>`).join("")}</ul></details></div>` : ""}
       ${s.stridesAfter ? `<details class="howto"><summary>How to do strides</summary><ul>${STRIDES_HOW.map(x => `<li>${esc(x)}</li>`).join("")}</ul></details>` : ""}
       ${checked ? `<div class="mini">${logged ? `<span class="minikm">${km2(state.km[id].km)} km</span>` : ""}<button type="button" class="more" data-more="${id}" aria-expanded="${!min}">${min ? "Details" : "Hide"}</button></div>` : ""}
       ${s.test ? "" : `<details class="logbox" id="log${i}" ${logged?"open":""}>
@@ -777,6 +778,117 @@ function updateStrip(){
     ? p.list.map(r => `<div class="wkrun"><span><span class="wkw">${r.s.w===0?"Before you start":"Week "+r.s.w} \u00b7 ${esc(runLabel(r.s))} \u00b7 ${esc(r.s.title)}</span>${esc(r.s.work)}</span><span class="wkkm">${km2(r.km)} km</span><button type="button" data-share="${r.i}" aria-label="Share this run">\u2b06 Share</button></div>`).join("")
     : `<p class="wkempty">${weekOffset===0 ? "No distances logged yet this week." : "No distances logged that week."}</p>`;
 }
+
+/* ============================ WATCH EXPORT (TEST: Week 7 of the 14-week) ============================
+   Builds a structured-workout .FIT file for a session, using the athlete's own test paces.
+   Garmin Connect (web) imports it; "Send to Device" puts it on the watch. */
+const WATCH_OK = s => state.prog === "14" && s.w === 7 && !!speedsForWeek(s.w);
+function restSecs(t){ const m = /(\d+)(?:\s*[–-]\s*(\d+))?\s*(min|sec)/.exec(t || ""); if(!m) return 0; const n = +(m[2] || m[1]); return m[3] === "min" ? n*60 : n; }
+// Plan = list of steps and {rep, steps} blocks. dur: {s} time | {m} distance | {open:true}
+function watchPlan(s){
+  const sp = speedsForWeek(s.w); if(!sp) throw new Error("Enter your 6-minute test first.");
+  const tgt = z => ({lo: sp[z]*0.95, hi: sp[z]*1.05});
+  const P = [];
+  const st = (name, dur, intensity, target) => ({name, dur, intensity, target: target || null});
+  if(s.warm || s.strides) P.push(st("Warm-up", {s:(s.warm || 5)*60}, "warmup"));
+  if(s.strides) P.push({rep:s.strides, steps:[st("Stride 200m", {m:200}, "interval", tgt("vo2")), st("Walk back", {s:90}, "recovery")]});
+  const w = String(s.work).replace(/\s+/g, "");
+  let m;
+  if((m = /^(\d+)(?:–(\d+))?min(?:continuous)?$/.exec(w))){
+    const lo = +m[1], hi = m[2] ? +m[2] : lo;
+    P.push(st(`${ZONES[s.zone].name} ${lo}min`, {s:lo*60}, "active", tgt(s.zone)));
+    if(hi > lo) P.push(st(`Optional +${hi-lo}min`, {open:true}, "active", tgt(s.zone)));
+  } else if(/^(\d+×\d+(m|km)?,?)+$/.test(w)){
+    const groups = w.split(",").map(g => { const x = /^(\d+)×(\d+)(km|m)?$/.exec(g); return {n:+x[1], m:x[3] === "km" ? +x[2]*1000 : +x[2]}; });
+    const rest = restSecs(s.rest);
+    groups.forEach((g, gi) => {
+      const last = gi === groups.length - 1, name = `${g.m}m`;
+      const run = st(name, {m:g.m}, "interval", tgt(s.zone)), rec = st("Rest", {s:rest}, "recovery");
+      if(!last){ g.n > 1 ? P.push({rep:g.n, steps:[run, rec]}) : P.push(run, rec); }
+      else { if(g.n > 2) P.push({rep:g.n-1, steps:[run, rec]}); else if(g.n === 2) P.push(run, rec); P.push(Object.assign({}, run)); }
+    });
+  } else throw new Error("Not supported yet");
+  if(s.cool) P.push(st("Cool-down", {s:s.cool*60}, "cooldown"));
+  return P;
+}
+const FIT_INT = {active:0, recovery:4, warmup:2, cooldown:3, interval:5};
+function fitSteps(plan){
+  const out = [];
+  const one = x => { const d = x.dur, t = x.target;
+    out.push({name:x.name, dt: d.open ? 5 : d.m ? 1 : 0, dv: d.open ? 0 : d.m ? d.m*100 : d.s*1000,
+      tt: t ? 0 : 2, tv: t ? 0 : 0xFFFFFFFF, lo: t ? Math.round(t.lo*1000) : 0xFFFFFFFF, hi: t ? Math.round(t.hi*1000) : 0xFFFFFFFF, int: FIT_INT[x.intensity]}); };
+  plan.forEach(x => {
+    if(x.rep){ const from = out.length; x.steps.forEach(one);
+      out.push({name:"Repeat", dt:6, dv:from, tt:0xFF, tv:x.rep, lo:0xFFFFFFFF, hi:0xFFFFFFFF, int:0xFF}); }
+    else one(x);
+  });
+  return out;
+}
+function fitCrc(bytes, crc){
+  const T = [0x0,0xCC01,0xD801,0x1400,0xF001,0x3C00,0x2800,0xE401,0xA001,0x6C00,0x7800,0xB401,0x5000,0x9C01,0x8801,0x4400];
+  crc = crc || 0;
+  for(const b of bytes){
+    let t = T[crc & 0xF]; crc = (crc >> 4) & 0x0FFF; crc = crc ^ t ^ T[b & 0xF];
+    t = T[crc & 0xF]; crc = (crc >> 4) & 0x0FFF; crc = crc ^ t ^ T[(b >> 4) & 0xF];
+  }
+  return crc;
+}
+function buildFit(name, steps){
+  const d = [];
+  const u8 = v => d.push(v & 255), u16 = v => { u8(v); u8(v >> 8); }, u32 = v => { u16(v & 0xFFFF); u16((v >>> 16) & 0xFFFF); };
+  const str = (t, n) => { const b = Array.from(new TextEncoder().encode(t)).slice(0, n-1); while(b.length < n) b.push(0); b.forEach(u8); };
+  const def = (loc, gm, f) => { u8(0x40 | loc); u8(0); u8(0); u16(gm); u8(f.length); f.forEach(x => { u8(x[0]); u8(x[1]); u8(x[2]); }); };
+  const ENUM = 0x00, U16 = 0x84, U32 = 0x86, STR = 0x07, U32Z = 0x8C;
+  def(0, 0, [[0,1,ENUM],[1,2,U16],[2,2,U16],[3,4,U32Z],[4,4,U32]]);
+  u8(0); u8(5); u16(255); u16(0); u32(Math.floor(Math.random()*0x7FFFFFFF) + 1); u32(Math.floor(Date.now()/1000) - 631065600);
+  def(1, 26, [[4,1,ENUM],[6,2,U16],[8,24,STR]]);
+  u8(1); u8(1); u16(steps.length); str(name, 24);
+  def(2, 27, [[254,2,U16],[0,16,STR],[1,1,ENUM],[2,4,U32],[3,1,ENUM],[4,4,U32],[5,4,U32],[6,4,U32],[7,1,ENUM]]);
+  steps.forEach((x, i) => { u8(2); u16(i); str(x.name, 16); u8(x.dt); u32(x.dv); u8(x.tt); u32(x.tv); u32(x.lo); u32(x.hi); u8(x.int); });
+  const h = [14, 0x20, 0x54, 0x08, d.length & 255, (d.length >> 8) & 255, (d.length >> 16) & 255, (d.length >>> 24) & 255, 0x2E, 0x46, 0x49, 0x54];
+  const hc = fitCrc(h); h.push(hc & 255, hc >> 8);
+  const all = h.concat(d), c = fitCrc(all); all.push(c & 255, c >> 8);
+  return new Uint8Array(all);
+}
+// Some hosts (the preview) only allow certain file types, so .fit is wrapped in a plain, uncompressed .zip there.
+function crc32(b){ let c, crc = 0xFFFFFFFF; for(let i = 0; i < b.length; i++){ c = (crc ^ b[i]) & 0xFF; for(let k = 0; k < 8; k++) c = c & 1 ? (c >>> 1) ^ 0xEDB88320 : c >>> 1; crc = (crc >>> 8) ^ c; } return (crc ^ 0xFFFFFFFF) >>> 0; }
+function zipOne(name, bytes){
+  const n = new TextEncoder().encode(name), crc = crc32(bytes), o = [];
+  const u16 = v => o.push(v & 255, (v >> 8) & 255), u32 = v => { u16(v & 0xFFFF); u16((v >>> 16) & 0xFFFF); };
+  u32(0x04034b50); u16(20); u16(0); u16(0); u16(0); u16(33); u32(crc); u32(bytes.length); u32(bytes.length); u16(n.length); u16(0); n.forEach(x => o.push(x));
+  const local = o.length + bytes.length; bytes.forEach(x => o.push(x));
+  const cdStart = o.length;
+  u32(0x02014b50); u16(20); u16(20); u16(0); u16(0); u16(0); u16(33); u32(crc); u32(bytes.length); u32(bytes.length); u16(n.length); u16(0); u16(0); u16(0); u16(0); u32(0); u32(0); n.forEach(x => o.push(x));
+  const cdLen = o.length - cdStart;
+  u32(0x06054b50); u16(0); u16(0); u16(1); u16(1); u32(cdLen); u32(cdStart); u16(0);
+  return new Uint8Array(o);
+}
+async function saveWatchFile(name, bytes){
+  let dl = null;
+  try { dl = window.claude && await window.claude.use("downloads"); } catch(e){}
+  if(dl){ await dl.save({filename: name + ".zip", data: zipOne(name, bytes)}); return "zip"; }
+  const url = URL.createObjectURL(new Blob([bytes], {type:"application/octet-stream"}));
+  const a = document.createElement("a"); a.href = url; a.download = name;
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(url), 10000);
+  return "fit";
+}
+const WATCH_GUIDE = ["Tap Add to watch and save the file. In the preview it arrives as a .zip: unzip it to get the .fit file.",
+  "On a computer, open Garmin Connect (connect.garmin.com). Go to Training & Planning, then Workouts, and use Import.",
+  "Open the imported workout, tap Send to Device, then sync your watch.",
+  "Or copy the .fit file over USB into the Garmin/NewFiles folder on the watch, then restart it.",
+  "Paces and heart rate targets come from your own test. Rests are timed, not go-HR."];
+$("program").addEventListener("click", async e => {
+  const b = e.target.closest(".wat"); if(!b) return;
+  const i = +b.dataset.wat, s = PROGRAM[i], msg = b.parentNode.querySelector(".watmsg");
+  try {
+    const name = `HYROX ${runLabel(s)} ${s.title}`;
+    const bytes = buildFit(name, fitSteps(watchPlan(s)));
+    const how = await saveWatchFile(`HYROX-${runLabel(s).replace(/\s+/g, "-")}-${s.title.replace(/\s+/g, "-")}.fit`, bytes);
+    msg.textContent = how === "zip" ? "Saved as a .zip. Unzip it to get the .fit file." : "Saved. Import it in Garmin Connect.";
+  } catch(err){ msg.textContent = err && err.code === "declined" ? "" : "Couldn’t make the file: " + (err && err.message || "try again."); }
+});
+
 /* ============================ SHARE IMAGE ============================ */
 let shIndex = 0, shMode = "session";
 let shMono = false; // default: full colour (zone accent colours). Toggle switches to a single-colour white monotone version for overlaying on photos.

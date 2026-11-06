@@ -116,6 +116,11 @@ a.btn{display:block;text-align:center;text-decoration:none}
 .sess .title{font-weight:600}
 .sess .work{font-family:"Barlow Condensed",Arial,sans-serif;font-size:1.25rem;font-weight:700;line-height:1.15}
 .sess .note{font-size:.85rem;color:var(--muted)}
+.watbox{grid-column:2/-1;margin-top:4px}
+.watbox .wat{background:transparent;border:1px solid var(--rule);border-radius:8px;color:var(--ink);font-size:1rem;padding:8px 14px;cursor:pointer;min-height:40px}
+.watbox .wat:hover{border-color:var(--ink)}
+.watbox .watmsg{margin-left:8px;font-size:.85rem;color:var(--muted)}
+.sess.min .watbox{display:none}
 .howto{grid-column:2/-1;font-size:.88rem;margin-top:2px}
 .howto>summary{cursor:pointer;color:var(--lt);font-weight:600;list-style:none;display:inline-block;padding:2px 0}
 .howto>summary::-webkit-details-marker{display:none}
@@ -321,7 +326,7 @@ footer .small{margin:0}
 }
 @media (prefers-reduced-motion:no-preference){ .sess input{transition:transform .1s} .sess input:active{transform:scale(.9)} }
 
-@media print{
+@media print{ .watbox{display:none!important}
   @page{size:A4 portrait;margin:12mm}
   .custombox{display:none!important}
   :root{--bg:#fff;--soft:#F4F5F7;--ink:#000;--muted:#555;--rule:#CCC}
